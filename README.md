@@ -19,23 +19,27 @@ Claude (LLM) ◄──stdio──► MCP Server ◄──HTTPS──► GitHub A
 - Node.js >= 18
 - GitHub account + Personal Access Token ([tạo tại đây](https://github.com/settings/tokens) — cần quyền **repo**)
 
-### 1 lệnh cài đặt
+### Cách 1: curl (nhanh nhất)
 
 ```bash
-git clone https://github.com/<your-username>/knowledge_mcp.git
+curl -fsSL https://raw.githubusercontent.com/webcake-tech/knowledge_mcp/main/install-curl.sh | bash
+```
+
+1 lệnh duy nhất — clone, install, build, cấu hình `.env` interactive, in ra config cho Claude.
+
+### Cách 2: clone + install script
+
+```bash
+git clone https://github.com/webcake-tech/knowledge_mcp.git
 cd knowledge_mcp
 ./install.sh
 ```
 
-Script sẽ tự động:
-- Kiểm tra Node.js version
-- Cài dependencies + build TypeScript
-- Tạo file `.env` và hướng dẫn điền thông tin
-- In ra cấu hình cho Claude Desktop / Claude Code
-
-### Cài thủ công
+### Cách 3: thủ công
 
 ```bash
+git clone https://github.com/webcake-tech/knowledge_mcp.git
+cd knowledge_mcp
 npm install
 npm run build
 cp .env.example .env
@@ -73,11 +77,15 @@ WRITE_RETRIES=3                         # Retry khi conflict
 
 ---
 
-## Kết nối với Claude
+## Kết nối với AI Platform
+
+MCP server chạy qua stdio — tương thích mọi platform hỗ trợ MCP.
+
+> Thay `/path/to/knowledge_mcp` bằng đường dẫn thực tế. Script `install.sh` sẽ in ra đường dẫn chính xác.
 
 ### Claude Desktop
 
-Mở file cấu hình:
+File cấu hình:
 - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
@@ -86,7 +94,7 @@ Mở file cấu hình:
   "mcpServers": {
     "knowledge-brain": {
       "command": "node",
-      "args": ["/đường-dẫn-tuyệt-đối/knowledge_mcp/dist/index.js"],
+      "args": ["/path/to/knowledge_mcp/dist/index.js"],
       "env": {
         "GITHUB_TOKEN": "ghp_...",
         "GITHUB_OWNER": "yourusername",
@@ -97,15 +105,123 @@ Mở file cấu hình:
 }
 ```
 
-Khởi động lại Claude Desktop.
-
-### Claude Code
+### Claude Code (CLI)
 
 ```bash
-claude mcp add knowledge-brain -- node /đường-dẫn-tuyệt-đối/knowledge_mcp/dist/index.js
+claude mcp add knowledge-brain -- node /path/to/knowledge_mcp/dist/index.js
 ```
 
-> Script `install.sh` sẽ in ra đường dẫn chính xác sau khi cài.
+### Cursor
+
+Settings → MCP Servers → Add new:
+
+```json
+{
+  "mcpServers": {
+    "knowledge-brain": {
+      "command": "node",
+      "args": ["/path/to/knowledge_mcp/dist/index.js"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_...",
+        "GITHUB_OWNER": "yourusername",
+        "GITHUB_REPO": "brain"
+      }
+    }
+  }
+}
+```
+
+### VS Code (Copilot / Roo Code / Continue)
+
+File `.vscode/mcp.json` trong project hoặc global settings:
+
+```json
+{
+  "servers": {
+    "knowledge-brain": {
+      "command": "node",
+      "args": ["/path/to/knowledge_mcp/dist/index.js"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_...",
+        "GITHUB_OWNER": "yourusername",
+        "GITHUB_REPO": "brain"
+      }
+    }
+  }
+}
+```
+
+### Windsurf
+
+File `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "knowledge-brain": {
+      "command": "node",
+      "args": ["/path/to/knowledge_mcp/dist/index.js"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_...",
+        "GITHUB_OWNER": "yourusername",
+        "GITHUB_REPO": "brain"
+      }
+    }
+  }
+}
+```
+
+### OpenAI Codex CLI
+
+File `~/.codex/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "knowledge-brain": {
+      "command": "node",
+      "args": ["/path/to/knowledge_mcp/dist/index.js"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_...",
+        "GITHUB_OWNER": "yourusername",
+        "GITHUB_REPO": "brain"
+      }
+    }
+  }
+}
+```
+
+### Antigravity
+
+Project settings → Integrations → MCP → Add server:
+
+```json
+{
+  "mcpServers": {
+    "knowledge-brain": {
+      "command": "node",
+      "args": ["/path/to/knowledge_mcp/dist/index.js"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_...",
+        "GITHUB_OWNER": "yourusername",
+        "GITHUB_REPO": "brain"
+      }
+    }
+  }
+}
+```
+
+### Bất kỳ MCP Client nào
+
+Cấu hình chung — chỉ cần 3 thứ:
+
+| Field | Value |
+|-------|-------|
+| Command | `node` |
+| Args | `/path/to/knowledge_mcp/dist/index.js` |
+| Env | `GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO` |
+
+Transport: **stdio** (mặc định).
 
 ---
 
@@ -249,8 +365,9 @@ src/
 
 | Lệnh | Mô tả |
 |-------|--------|
+| `curl ... \| bash` | Cài từ xa 1 lệnh (clone + install + build + config) |
 | `./install.sh` | Cài đặt lần đầu (deps + build + .env) |
-| `./update.sh` | Cập nhật (pull + deps + rebuild) |
+| `./update.sh` | Cập nhật (pull + deps + rebuild + check .env) |
 | `npm run build` | Build TypeScript → `dist/` |
 | `npm run start` | Chạy server production |
 | `npm run dev` | Chạy trực tiếp bằng tsx |

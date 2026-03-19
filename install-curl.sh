@@ -9,8 +9,11 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+REPO_URL="https://github.com/webcake-tech/knowledge_mcp.git"
+INSTALL_DIR="$HOME/knowledge_mcp"
+
 echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║   Knowledge MCP Server — Installer       ║${NC}"
+echo -e "${CYAN}║   Knowledge MCP Server — Quick Install   ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -28,22 +31,35 @@ if [ "$NODE_VERSION" -lt 18 ]; then
 fi
 echo -e "${GREEN}✓ Node.js $(node -v)${NC}"
 
-# ─── Check npm ──────────────────────────────────────────────
-if ! command -v npm &> /dev/null; then
-    echo -e "${RED}✗ npm not found${NC}"
+# ─── Check git ──────────────────────────────────────────────
+if ! command -v git &> /dev/null; then
+    echo -e "${RED}✗ git not found${NC}"
     exit 1
 fi
-echo -e "${GREEN}✓ npm $(npm -v)${NC}"
+echo -e "${GREEN}✓ git$(git --version | sed 's/git version/ /')${NC}"
 
-# ─── Install dependencies ──────────────────────────────────
+# ─── Clone or update ───────────────────────────────────────
+echo ""
+if [ -d "$INSTALL_DIR" ]; then
+    echo -e "${YELLOW}Directory exists: $INSTALL_DIR${NC}"
+    echo -e "${YELLOW}Pulling latest...${NC}"
+    cd "$INSTALL_DIR"
+    git pull --ff-only
+else
+    echo -e "${YELLOW}Cloning to $INSTALL_DIR...${NC}"
+    git clone "$REPO_URL" "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+fi
+echo -e "${GREEN}✓ Source ready${NC}"
+
+# ─── Install + Build ───────────────────────────────────────
 echo ""
 echo -e "${YELLOW}Installing dependencies...${NC}"
 npm install --silent
 echo -e "${GREEN}✓ Dependencies installed${NC}"
 
-# ─── Build ──────────────────────────────────────────────────
 echo ""
-echo -e "${YELLOW}Building TypeScript...${NC}"
+echo -e "${YELLOW}Building...${NC}"
 npm run build --silent
 echo -e "${GREEN}✓ Build complete${NC}"
 
@@ -51,45 +67,39 @@ echo -e "${GREEN}✓ Build complete${NC}"
 echo ""
 if [ -f .env ]; then
     echo -e "${GREEN}✓ .env already exists${NC}"
-else
-    cp .env.example .env
-    echo -e "${YELLOW}Created .env from .env.example${NC}"
-    echo ""
-    echo -e "${CYAN}Please edit .env with your settings:${NC}"
-    echo ""
-    echo "  GITHUB_TOKEN  — GitHub Personal Access Token (repo scope)"
-    echo "                   Get one at: https://github.com/settings/tokens"
-    echo "  GITHUB_OWNER  — Your GitHub username"
-    echo "  GITHUB_REPO   — Repository name (e.g. brain)"
-    echo ""
-    echo -e "${YELLOW}Edit now? (y/n)${NC}"
-    read -r EDIT_ENV
-    if [ "$EDIT_ENV" = "y" ] || [ "$EDIT_ENV" = "Y" ]; then
-        if command -v nano &> /dev/null; then
-            nano .env
-        elif command -v vim &> /dev/null; then
-            vim .env
-        else
-            echo "Please edit .env manually with your text editor"
-        fi
-    fi
-fi
-
-# ─── Read .env values ─────────────────────────────────────
-source .env 2>/dev/null || true
-if [ -z "$GITHUB_TOKEN" ] || [ "$GITHUB_TOKEN" = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" ]; then
-    echo -e "${YELLOW}⚠ GITHUB_TOKEN not configured yet. Edit .env before using.${NC}"
-    ENV_TOKEN="your-token"
-    ENV_OWNER="your-username"
-    ENV_REPO="brain"
-else
-    echo -e "${GREEN}✓ .env configured${NC}"
+    source .env 2>/dev/null || true
     ENV_TOKEN="$GITHUB_TOKEN"
     ENV_OWNER="$GITHUB_OWNER"
     ENV_REPO="${GITHUB_REPO:-brain}"
-fi
+else
+    cp .env.example .env
+    echo -e "${YELLOW}Configure GitHub connection:${NC}"
+    echo ""
+    echo -e "  ${CYAN}GITHUB_TOKEN${NC}  — https://github.com/settings/tokens (repo scope)"
+    echo -e "  ${CYAN}GITHUB_OWNER${NC}  — Your GitHub username"
+    echo -e "  ${CYAN}GITHUB_REPO${NC}   — Repository name (e.g. brain)"
+    echo ""
 
-INSTALL_DIR=$(pwd)
+    read -rp "  GITHUB_TOKEN: " ENV_TOKEN
+    read -rp "  GITHUB_OWNER: " ENV_OWNER
+    read -rp "  GITHUB_REPO (brain): " ENV_REPO
+    ENV_REPO=${ENV_REPO:-brain}
+
+    if [ -n "$ENV_TOKEN" ] && [ -n "$ENV_OWNER" ]; then
+        sed -i.bak "s|ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx|$ENV_TOKEN|" .env
+        sed -i.bak "s|yourusername|$ENV_OWNER|" .env
+        sed -i.bak "s|GITHUB_REPO=brain|GITHUB_REPO=$ENV_REPO|" .env
+        rm -f .env.bak
+        echo ""
+        echo -e "${GREEN}✓ .env configured${NC}"
+    else
+        echo ""
+        echo -e "${YELLOW}⚠ Skipped — edit .env manually later${NC}"
+        ENV_TOKEN="ghp_..."
+        ENV_OWNER="yourusername"
+        ENV_REPO="brain"
+    fi
+fi
 
 # ─── Select platform ──────────────────────────────────────
 echo ""
@@ -202,7 +212,7 @@ case "$PLATFORM" in
         echo ""
         mcp_json
         echo ""
-        echo -e "  Or add to ${BOLD}~/.cursor/mcp.json${NC}:"
+        echo -e "  Or write to ${BOLD}~/.cursor/mcp.json${NC}:"
         echo -e "${YELLOW}  Write config automatically? (y/n)${NC}"
         read -r AUTO_WRITE
         if [ "$AUTO_WRITE" = "y" ] || [ "$AUTO_WRITE" = "Y" ]; then
@@ -266,11 +276,11 @@ case "$PLATFORM" in
         echo "            GITHUB_OWNER=$ENV_OWNER"
         echo "            GITHUB_REPO=$ENV_REPO"
         echo ""
-        echo -e "  ${BOLD}JSON format (mcpServers):${NC}"
+        echo -e "  ${BOLD}JSON (mcpServers):${NC}"
         echo ""
         mcp_json
         echo ""
-        echo -e "  ${BOLD}JSON format (VS Code):${NC}"
+        echo -e "  ${BOLD}JSON (VS Code):${NC}"
         echo ""
         vscode_json
         ;;
