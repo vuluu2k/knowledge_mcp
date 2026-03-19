@@ -416,6 +416,10 @@ WRITE_RETRIES=3                         # Retry khi conflict
 ## Cập nhật
 
 ```bash
+# Nếu cài bằng curl (mặc định ~/.knowledge-brain-mcp)
+curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/update.sh | bash
+
+# Hoặc chạy trực tiếp trong thư mục đã clone
 ./update.sh
 ```
 
