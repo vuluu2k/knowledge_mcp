@@ -18,8 +18,7 @@ export class Aggregator {
 
   async getTasksByTag(tag: string): Promise<Task[]> {
     const all = await this.brain.getAllTasks();
-    const combined = [...all.today, ...all.backlog];
-    return combined.filter((t) => t.tags.includes(tag));
+    return [...all.today, ...all.backlog].filter((t) => t.tags.includes(tag));
   }
 
   async getStats(): Promise<{
@@ -31,7 +30,6 @@ export class Aggregator {
   }> {
     const all = await this.brain.getAllTasks();
     const combined = [...all.today, ...all.backlog];
-
     return {
       totalTasks: combined.length,
       completedTasks: combined.filter((t) => t.status === "done").length,

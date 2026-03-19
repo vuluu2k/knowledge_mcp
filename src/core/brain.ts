@@ -1,6 +1,8 @@
 import type { BrainSync } from "../github/sync.js";
 import type { Task } from "../types/task.js";
 import type { Note, Goal, InboxItem, BrainSection } from "../types/brain.js";
+import { isNotFound } from "../errors.js";
+import { getLogger } from "../logger.js";
 import {
   parseTasks,
   appendTask,
@@ -18,15 +20,16 @@ export class Brain {
 
   // ─── Read Operations ────────────────────────────────────
 
-  async getTasks(
-    section: "today" | "backlog"
-  ): Promise<Task[]> {
+  async getTasks(section: "today" | "backlog"): Promise<Task[]> {
+    const log = getLogger();
     const brainSection: BrainSection = `tasks/${section}`;
     try {
       const file = await this.sync.readSection(brainSection);
-      return parseTasks(file.content, brainSection);
-    } catch (err: any) {
-      if (err.message?.includes("not found")) return [];
+      const tasks = parseTasks(file.content, brainSection);
+      log.info("getTasks", { section, count: tasks.length });
+      return tasks;
+    } catch (err) {
+      if (isNotFound(err)) return [];
       throw err;
     }
   }
@@ -39,28 +42,24 @@ export class Brain {
     return { today, backlog };
   }
 
-  async getNotes(
-    section: "ideas" | "learning"
-  ): Promise<Note[]> {
+  async getNotes(section: "ideas" | "learning"): Promise<Note[]> {
     const brainSection: BrainSection = `notes/${section}`;
     try {
       const file = await this.sync.readSection(brainSection);
       return parseNotes(file.content, brainSection);
-    } catch (err: any) {
-      if (err.message?.includes("not found")) return [];
+    } catch (err) {
+      if (isNotFound(err)) return [];
       throw err;
     }
   }
 
-  async getGoals(
-    section: "short-term" | "long-term"
-  ): Promise<Goal[]> {
+  async getGoals(section: "short-term" | "long-term"): Promise<Goal[]> {
     const brainSection: BrainSection = `goals/${section}`;
     try {
       const file = await this.sync.readSection(brainSection);
       return parseGoals(file.content, brainSection);
-    } catch (err: any) {
-      if (err.message?.includes("not found")) return [];
+    } catch (err) {
+      if (isNotFound(err)) return [];
       throw err;
     }
   }
@@ -69,146 +68,123 @@ export class Brain {
     try {
       const file = await this.sync.readSection("inbox");
       return parseInbox(file.content);
-    } catch (err: any) {
-      if (err.message?.includes("not found")) return [];
+    } catch (err) {
+      if (isNotFound(err)) return [];
       throw err;
     }
   }
 
   // ─── Write Operations ───────────────────────────────────
 
-  async addTask(
-    text: string,
-    target: "today" | "backlog"
-  ): Promise<Task> {
+  async addTask(text: string, target: "today" | "backlog"): Promise<Task> {
+    const log = getLogger();
     const section: BrainSection = `tasks/${target}`;
-    let content: string;
-    let sha: string;
 
     try {
-      const file = await this.sync.readSection(section);
-      content = appendTask(file.content, text);
-      sha = file.sha;
-    } catch (err: any) {
-      if (err.message?.includes("not found")) {
-        // File doesn't exist yet — create it
-        content = `# ${target === "today" ? "Today" : "Backlog"}\n\n- [ ] ${text}\n`;
+      const result = await this.sync.atomicUpdate(
+        section,
+        (current) => appendTask(current, text),
+        `feat(ai): add task to ${target}`
+      );
+      const tasks = parseTasks(result.content, section);
+      log.info("addTask", { target, text });
+      return tasks[tasks.length - 1];
+    } catch (err) {
+      if (isNotFound(err)) {
+        const title = target === "today" ? "Today" : "Backlog";
+        const content = `# ${title}\n\n- [ ] ${text}\n`;
         await this.sync.createSection(
           section,
           content,
           `feat(ai): create ${target} with new task`
         );
+        log.info("addTask: created file", { target, text });
         const tasks = parseTasks(content, section);
         return tasks[tasks.length - 1];
       }
       throw err;
     }
-
-    await this.sync.writeSection(
-      section,
-      content,
-      sha,
-      `feat(ai): add task to ${target}`
-    );
-
-    const tasks = parseTasks(content, section);
-    return tasks[tasks.length - 1];
   }
 
   async markTaskDone(
     section: "today" | "backlog",
     taskId: string
   ): Promise<void> {
+    const log = getLogger();
     const brainSection: BrainSection = `tasks/${section}`;
-    const file = await this.sync.readSection(brainSection);
-    const newContent = toggleTaskDone(file.content, taskId, brainSection);
 
-    await this.sync.writeSection(
+    await this.sync.atomicUpdate(
       brainSection,
-      newContent,
-      file.sha,
+      (current) => toggleTaskDone(current, taskId, brainSection),
       `feat(ai): mark task done`
     );
+    log.info("markTaskDone", { section, taskId });
   }
 
   async markTaskDoneByText(
     section: "today" | "backlog",
     searchText: string
   ): Promise<void> {
+    const log = getLogger();
     const brainSection: BrainSection = `tasks/${section}`;
-    const file = await this.sync.readSection(brainSection);
-    const newContent = markTaskDoneByText(file.content, searchText);
 
-    await this.sync.writeSection(
+    await this.sync.atomicUpdate(
       brainSection,
-      newContent,
-      file.sha,
+      (current) => markTaskDoneByText(current, searchText),
       `feat(ai): mark task done`
     );
+    log.info("markTaskDoneByText", { section, searchText });
   }
 
-  async addNote(
-    text: string,
-    section: "ideas" | "learning"
-  ): Promise<void> {
+  async addNote(text: string, section: "ideas" | "learning"): Promise<void> {
+    const log = getLogger();
     const brainSection: BrainSection = `notes/${section}`;
-    let content: string;
-    let sha: string;
 
     try {
-      const file = await this.sync.readSection(brainSection);
-      content = appendNote(file.content, text);
-      sha = file.sha;
-    } catch (err: any) {
-      if (err.message?.includes("not found")) {
+      await this.sync.atomicUpdate(
+        brainSection,
+        (current) => appendNote(current, text),
+        `feat(ai): add note to ${section}`
+      );
+      log.info("addNote", { section, text });
+    } catch (err) {
+      if (isNotFound(err)) {
         const title = section === "ideas" ? "Ideas" : "Learning";
-        content = `# ${title}\n\n`;
-        content = appendNote(content, text);
+        const content = appendNote(`# ${title}\n\n`, text);
         await this.sync.createSection(
           brainSection,
           content,
           `feat(ai): create ${section} with new note`
         );
+        log.info("addNote: created file", { section });
         return;
       }
       throw err;
     }
-
-    await this.sync.writeSection(
-      brainSection,
-      content,
-      sha,
-      `feat(ai): add note to ${section}`
-    );
   }
 
   async saveToInbox(text: string): Promise<void> {
-    let content: string;
-    let sha: string;
+    const log = getLogger();
 
     try {
-      const file = await this.sync.readSection("inbox");
-      content = appendInboxItem(file.content, text);
-      sha = file.sha;
-    } catch (err: any) {
-      if (err.message?.includes("not found")) {
-        content = `# Inbox\n\n`;
-        content = appendInboxItem(content, text);
+      await this.sync.atomicUpdate(
+        "inbox",
+        (current) => appendInboxItem(current, text),
+        `feat(ai): save to inbox`
+      );
+      log.info("saveToInbox", { text });
+    } catch (err) {
+      if (isNotFound(err)) {
+        const content = appendInboxItem(`# Inbox\n\n`, text);
         await this.sync.createSection(
           "inbox",
           content,
           `feat(ai): create inbox with new item`
         );
+        log.info("saveToInbox: created file");
         return;
       }
       throw err;
     }
-
-    await this.sync.writeSection(
-      "inbox",
-      content,
-      sha,
-      `feat(ai): save to inbox`
-    );
   }
 }
