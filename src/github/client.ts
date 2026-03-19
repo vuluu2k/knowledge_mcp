@@ -30,6 +30,58 @@ export class GitHubClient {
     this.cacheTtlMs = config.cacheTtlMs ?? 30_000;
   }
 
+  /**
+   * Ensure the repository exists on GitHub. Creates it if missing.
+   * Returns true if the repo was just created, false if it already existed.
+   */
+  async ensureRepoExists(): Promise<boolean> {
+    const log = getLogger();
+
+    try {
+      await this.octokit.repos.get({
+        owner: this.owner,
+        repo: this.repo,
+      });
+      log.debug("ensureRepoExists: repo already exists");
+      return false;
+    } catch (err: unknown) {
+      const status = (err as any)?.status;
+      if (status !== 404) {
+        throw new GitHubApiError(
+          `Failed to check repo: ${(err as Error).message}`,
+          status ?? 500,
+          err
+        );
+      }
+    }
+
+    // Repo doesn't exist — create it
+    log.info("ensureRepoExists: creating repo", {
+      owner: this.owner,
+      repo: this.repo,
+    });
+
+    try {
+      await this.octokit.repos.createForAuthenticatedUser({
+        name: this.repo,
+        private: true,
+        description: "Personal AI brain — managed by Knowledge MCP Server",
+        auto_init: false,
+      });
+      log.info("ensureRepoExists: repo created");
+      return true;
+    } catch (err: unknown) {
+      const status = (err as any)?.status;
+      // 422 = repo already exists (race condition)
+      if (status === 422) return false;
+      throw new GitHubApiError(
+        `Failed to create repo "${this.repo}": ${(err as Error).message}`,
+        status ?? 500,
+        err
+      );
+    }
+  }
+
   async getFile(path: string, skipCache = false): Promise<FileContent> {
     const log = getLogger();
 

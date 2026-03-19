@@ -7,7 +7,7 @@ export function registerBrainTools(server: McpServer, brain: Brain): void {
     "initBrain",
     {
       description:
-        "Initialize the brain repository structure. Creates all required folders and markdown files in a single commit. Only needs to be called once on a new/empty repo.",
+        "Initialize the brain. Automatically creates the GitHub repo (private) if it doesn't exist, then creates all folders and markdown files in a single commit. Only needs to be called once. Safe to call again — returns error if already initialized.",
     },
     toolHandler("initBrain", async () => brain.initBrain())
   );

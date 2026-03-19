@@ -36,7 +36,7 @@ async function main() {
   });
 
   const sync = new BrainSync(githubClient, config.basePath, config.writeRetries);
-  const brain = new Brain(sync);
+  const brain = new Brain(sync, githubClient);
   const kb = new KnowledgeBase(githubClient, config.basePath, config.writeRetries);
   const insights = new InsightsEngine(brain, githubClient, config.basePath);
   const context = new ContextEngine(brain);

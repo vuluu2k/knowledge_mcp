@@ -1,4 +1,5 @@
 import type { BrainSync } from "../github/sync.js";
+import type { GitHubClient } from "../github/client.js";
 import type { Task } from "../types/task.js";
 import type { Note, Goal, InboxItem, BrainSection } from "../types/brain.js";
 import { isNotFound } from "../errors.js";
@@ -53,32 +54,47 @@ const BRAIN_TEMPLATES: Array<{ section: string; content: string }> = [
 ];
 
 export class Brain {
-  constructor(private sync: BrainSync) {}
+  constructor(
+    private sync: BrainSync,
+    private client?: GitHubClient
+  ) {}
 
   // ─── Init ───────────────────────────────────────────────
 
-  async initBrain(): Promise<{ created: string[] }> {
+  async initBrain(): Promise<{ created: string[]; repoCreated: boolean }> {
     const log = getLogger();
 
-    // Check if brain already exists by trying to read any section
-    try {
-      await this.sync.readSection("inbox");
-      throw new Error(
-        "Brain already initialized — inbox/capture.md exists. Use the other tools to manage your brain."
-      );
-    } catch (err) {
-      if (!isNotFound(err)) throw err;
-      // Not found = good, proceed with init
+    // Step 1: Create GitHub repo if it doesn't exist
+    let repoCreated = false;
+    if (this.client) {
+      repoCreated = await this.client.ensureRepoExists();
+      if (repoCreated) {
+        log.info("initBrain: created new GitHub repo");
+      }
     }
 
+    // Step 2: Check if brain already exists
+    if (!repoCreated) {
+      try {
+        await this.sync.readSection("inbox");
+        throw new Error(
+          "Brain already initialized — inbox/capture.md exists. Use the other tools to manage your brain."
+        );
+      } catch (err) {
+        if (!isNotFound(err)) throw err;
+        // Not found = good, proceed with init
+      }
+    }
+
+    // Step 3: Create all brain files in one commit
     await this.sync.createFiles(
       BRAIN_TEMPLATES,
       "feat(ai): initialize brain structure"
     );
 
     const created = BRAIN_TEMPLATES.map((t) => t.section);
-    log.info("initBrain", { created });
-    return { created };
+    log.info("initBrain", { created, repoCreated });
+    return { created, repoCreated };
   }
 
   // ─── Read Operations ────────────────────────────────────
