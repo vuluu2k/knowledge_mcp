@@ -9,9 +9,13 @@ import { registerKnowledgeTools } from "./tools/knowledge.js";
 import { registerInsightTools } from "./tools/insights.js";
 import { registerContextTools } from "./tools/context.js";
 import { registerStatsTools } from "./tools/stats.js";
+import { registerBehaviorTools } from "./tools/behavior.js";
+import { registerAutoActionTools } from "./tools/autoAction.js";
 import type { InsightsEngine } from "./core/insights.js";
 import type { ContextEngine } from "./core/context.js";
 import type { StatsEngine } from "./core/stats.js";
+import type { BehaviorEngine } from "./core/behavior.js";
+import type { AutoActionEngine } from "./core/autoAction.js";
 
 const SERVER_INSTRUCTIONS = `You are connected to the Knowledge Brain MCP server — a personal knowledge management system backed by a GitHub repository. Every action you perform creates a git commit, providing full version control and audit trail.
 
@@ -51,8 +55,17 @@ Data is stored as markdown files in a GitHub repo:
 - getTodayContext — returns prioritized snapshot: pending/completed/overdue tasks, suggested top 3 focus tasks (scored by priority + deadline + estimate), and short-term goals for alignment check.
 
 **Stats & Analytics** — when the user asks about their productivity, habits, or stats:
-- getStats — behavioral metrics: completion rate, avg tasks/day, most active hour/day, stale tasks, tag distribution, estimate coverage.
-- getInsights — comprehensive behavior analysis report (task stats, quality issues, overdue items, activity patterns, goal alignment). After receiving the report, present: Insights (patterns), Problems (blockers), and Suggestions (actionable improvements). Be specific, cite evidence.
+- getStats — raw behavioral metrics: completion rate, avg tasks/day, most active hour/day, stale tasks, tag distribution.
+- getInsights — aggregated data dump (task lists, quality issues, overdue items, activity timeline, goals).
+- analyzeBehavior — the SMART tool. Runs 5 algorithmic detectors (productivity, procrastination, task-structure, goal-alignment, workload) and returns structured insights with severity, evidence, and suggestions. Also returns a healthScore (0-100) and detected patterns (chronotype, peak hours, trends). USE THIS when the user asks "how am I doing?", "analyze my productivity", "what's wrong with my workflow?", or any behavioral analysis question. Present healthScore first, then insights grouped by severity.
+
+**Auto Actions** — self-optimizing task engine. When the user says "optimize my tasks", "clean up", "reschedule", or asks you to auto-organize:
+- runAutoActions — runs ALL auto-optimizations (reschedule, split, prioritize, cleanup, inject). ALWAYS run with dryRun=true first to preview, then dryRun=false to apply. All changes in ONE commit.
+- autoReschedule — move overdue backlog tasks to today
+- autoSplitTask — break oversized/stuck tasks into plan → execute → verify
+- autoPrioritize — promote top backlog items to today
+- autoCleanup — remove duplicates and stale abandoned tasks
+- autoInjectTask — create tasks for neglected goals
 
 **Initialization** — only for first-time setup:
 - initBrain — creates the full folder structure in one commit. Only needed once on a new/empty repo.
@@ -74,7 +87,9 @@ export function createServer(
   kb: KnowledgeBase,
   insights: InsightsEngine,
   context: ContextEngine,
-  stats: StatsEngine
+  stats: StatsEngine,
+  behavior: BehaviorEngine,
+  autoAction: AutoActionEngine
 ): McpServer {
   const server = new McpServer(
     {
@@ -94,6 +109,8 @@ export function createServer(
   registerInsightTools(server, insights);
   registerContextTools(server, context);
   registerStatsTools(server, stats);
+  registerBehaviorTools(server, behavior);
+  registerAutoActionTools(server, autoAction);
 
   return server;
 }

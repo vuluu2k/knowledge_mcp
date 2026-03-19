@@ -9,6 +9,8 @@ import { KnowledgeBase } from "./core/knowledge.js";
 import { InsightsEngine } from "./core/insights.js";
 import { ContextEngine } from "./core/context.js";
 import { StatsEngine } from "./core/stats.js";
+import { BehaviorEngine } from "./core/behavior.js";
+import { AutoActionEngine } from "./core/autoAction.js";
 import { loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
 
@@ -39,7 +41,9 @@ async function main() {
   const insights = new InsightsEngine(brain, githubClient, config.basePath);
   const context = new ContextEngine(brain);
   const stats = new StatsEngine(brain, githubClient, config.basePath);
-  const server = createServer(brain, kb, insights, context, stats);
+  const behavior = new BehaviorEngine(brain, githubClient, config.basePath);
+  const autoAction = new AutoActionEngine(brain, githubClient, config.basePath);
+  const server = createServer(brain, kb, insights, context, stats, behavior, autoAction);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

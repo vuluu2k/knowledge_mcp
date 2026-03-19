@@ -267,6 +267,81 @@ export function markTaskDoneByText(
   throw new Error(`No open task matching "${searchText}" found`);
 }
 
+// ─── Task Removal & Replacement ─────────────────────────────
+
+/**
+ * Removes tasks by their IDs from file content.
+ * Also removes any nested metadata sub-bullets belonging to removed tasks.
+ */
+export function removeTasksByIds(
+  content: string,
+  idsToRemove: Set<string>,
+  source: string
+): string {
+  if (idsToRemove.size === 0) return content;
+
+  const lines = normalizeLineEndings(content).split("\n");
+  const result: string[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const match = lines[i].match(TASK_REGEX);
+    if (match) {
+      const id = generateId(source, match[3].trim());
+      if (idsToRemove.has(id)) {
+        i++;
+        // Skip nested sub-bullets
+        while (i < lines.length) {
+          if (!lines[i].match(/^\s/) || !lines[i].trim()) break;
+          if (TASK_REGEX.test(lines[i])) break;
+          i++;
+        }
+        continue;
+      }
+    }
+    result.push(lines[i]);
+    i++;
+  }
+
+  return result.join("\n");
+}
+
+/**
+ * Replaces a single task (by ID) with new lines in place.
+ * Also removes any nested metadata sub-bullets of the replaced task.
+ */
+export function replaceTaskWithLines(
+  content: string,
+  taskId: string,
+  source: string,
+  newLines: string[]
+): string {
+  const lines = normalizeLineEndings(content).split("\n");
+  const result: string[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const match = lines[i].match(TASK_REGEX);
+    if (match) {
+      const id = generateId(source, match[3].trim());
+      if (id === taskId) {
+        result.push(...newLines);
+        i++;
+        while (i < lines.length) {
+          if (!lines[i].match(/^\s/) || !lines[i].trim()) break;
+          if (TASK_REGEX.test(lines[i])) break;
+          i++;
+        }
+        continue;
+      }
+    }
+    result.push(lines[i]);
+    i++;
+  }
+
+  return result.join("\n");
+}
+
 // ─── Bullet-list Parsing (notes, goals, inbox) ────────────
 
 interface BulletItem {
