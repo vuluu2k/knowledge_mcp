@@ -211,19 +211,32 @@ install_mcp() {
 
   cd "$INSTALL_DIR"
 
-  # Đảm bảo user hiện tại có quyền ghi vào thư mục
+  # Sửa quyền thư mục project nếu cần
   if [ ! -w "$INSTALL_DIR" ]; then
     warn "Không có quyền ghi vào $INSTALL_DIR, đang sửa quyền..."
     chmod -R u+rwX "$INSTALL_DIR" 2>/dev/null || sudo chown -R "$(whoami)" "$INSTALL_DIR"
   fi
 
+  # Sửa quyền npm cache nếu bị lỗi permission
+  NPM_CACHE_DIR="$(npm config get cache 2>/dev/null || echo "$HOME/.npm")"
+  if [ -d "$NPM_CACHE_DIR" ] && [ ! -w "$NPM_CACHE_DIR" ]; then
+    warn "npm cache bị lỗi quyền, đang sửa..."
+    sudo chown -R "$(whoami)" "$NPM_CACHE_DIR"
+  fi
+
   info "Đang cài dependencies..."
   if ! npm install < /dev/null; then
-    error "npm install thất bại!"
-    echo "  Nếu bị permission denied, thử:"
-    echo "    sudo chown -R \$(whoami) $INSTALL_DIR"
-    echo "    cd $INSTALL_DIR && npm install"
-    exit 1
+    # Thử lại với cache clean
+    warn "npm install thất bại, thử clean cache..."
+    npm cache clean --force 2>/dev/null
+    sudo chown -R "$(whoami)" "$NPM_CACHE_DIR" 2>/dev/null || true
+    if ! npm install < /dev/null; then
+      error "npm install thất bại!"
+      echo "  Thử chạy thủ công:"
+      echo "    sudo chown -R \$(whoami) ~/.npm"
+      echo "    cd $INSTALL_DIR && npm install"
+      exit 1
+    fi
   fi
 
   info "Đang build TypeScript..."
