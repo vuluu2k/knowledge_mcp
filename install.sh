@@ -172,8 +172,8 @@ install_mcp() {
           info "Đang cập nhật..."
           cd "$INSTALL_DIR"
           git pull origin main 2>/dev/null || git pull 2>/dev/null || warn "Git pull thất bại, dùng bản hiện tại"
-          npm install --silent
-          npm run build --silent
+          npm install
+          npm run build
           success "Cập nhật thành công"
           cd - > /dev/null
           MCP_INDEX="$INSTALL_DIR/dist/index.js"
@@ -182,9 +182,10 @@ install_mcp() {
       elif [ -d "$INSTALL_DIR/.git" ]; then
         # Case 2: Thư mục là git repo nhưng chưa build (clone cũ lỗi) → pull + rebuild
         warn "Thư mục đã tồn tại nhưng chưa build: $INSTALL_DIR"
-        info "Đang pull và build lại..."
+        info "Đang pull code mới nhất và build lại..."
         cd "$INSTALL_DIR"
-        git pull origin main 2>/dev/null || git pull 2>/dev/null || true
+        git fetch origin main 2>/dev/null || true
+        git reset --hard origin/main 2>/dev/null || git pull 2>/dev/null || true
         cd - > /dev/null
       else
         # Case 3: Thư mục tồn tại nhưng không phải repo → hỏi xóa
@@ -205,12 +206,21 @@ install_mcp() {
     fi
   fi
 
-  info "Đang cài dependencies..."
   cd "$INSTALL_DIR"
-  npm install --silent
+
+  info "Đang cài dependencies..."
+  if ! npm install 2>&1; then
+    error "npm install thất bại! Kiểm tra Node.js version và kết nối mạng."
+    echo "  Thử chạy thủ công: cd $INSTALL_DIR && npm install"
+    exit 1
+  fi
 
   info "Đang build TypeScript..."
-  npm run build --silent
+  if ! npm run build 2>&1; then
+    error "npm run build thất bại!"
+    echo "  Thử chạy thủ công: cd $INSTALL_DIR && npm run build"
+    exit 1
+  fi
   cd - > /dev/null
 
   success "Đã cài MCP server tại ${BOLD}$INSTALL_DIR${NC}"
