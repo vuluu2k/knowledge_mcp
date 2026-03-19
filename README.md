@@ -86,7 +86,7 @@ AI:  ## Insights
 ### Cách 1: Một lệnh duy nhất
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/webcake-tech/knowledge_mcp/main/install-curl.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install-curl.sh | bash
 ```
 
 Clone, install, build, cấu hình `.env` interactive, in ra config sẵn cho AI platform của bạn.
@@ -94,7 +94,7 @@ Clone, install, build, cấu hình `.env` interactive, in ra config sẵn cho AI
 ### Cách 2: Clone + script
 
 ```bash
-git clone https://github.com/webcake-tech/knowledge_mcp.git
+git clone https://github.com/vuluu2k/knowledge_mcp.git
 cd knowledge_mcp
 ./install.sh
 ```
@@ -102,7 +102,7 @@ cd knowledge_mcp
 ### Cách 3: Thủ công
 
 ```bash
-git clone https://github.com/webcake-tech/knowledge_mcp.git
+git clone https://github.com/vuluu2k/knowledge_mcp.git
 cd knowledge_mcp
 npm install && npm run build
 cp .env.example .env

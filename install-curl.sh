@@ -9,7 +9,7 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-REPO_URL="https://github.com/webcake-tech/knowledge_mcp.git"
+REPO_URL="https://github.com/vuluu2k/knowledge_mcp.git"
 INSTALL_DIR="$HOME/knowledge_mcp"
 
 echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
