@@ -228,6 +228,41 @@ export class GitHubClient {
     this.invalidateAll();
   }
 
+  /**
+   * List files in a directory. Returns file names (not content).
+   * Costs 1 API call regardless of file count.
+   */
+  async listDirectory(path: string): Promise<string[]> {
+    const log = getLogger();
+    log.debug("github.listDirectory", { path });
+
+    try {
+      const { data } = await this.octokit.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path,
+        ref: this.branch,
+      });
+
+      if (!Array.isArray(data)) {
+        throw new GitHubApiError(`Path "${path}" is not a directory`, 400);
+      }
+
+      return data
+        .filter((item) => item.type === "file" && item.name.endsWith(".md"))
+        .map((item) => item.name);
+    } catch (err: unknown) {
+      if (err instanceof GitHubApiError) throw err;
+      const status = (err as any)?.status;
+      if (status === 404) return [];
+      throw new GitHubApiError(
+        `Failed to list "${path}": ${(err as Error).message}`,
+        status ?? 500,
+        err
+      );
+    }
+  }
+
   invalidate(path: string) {
     this.cache.delete(path);
   }

@@ -5,6 +5,7 @@ import { createServer } from "./mcp.js";
 import { GitHubClient } from "./github/client.js";
 import { BrainSync } from "./github/sync.js";
 import { Brain } from "./core/brain.js";
+import { KnowledgeBase } from "./core/knowledge.js";
 import { loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
 
@@ -31,7 +32,8 @@ async function main() {
 
   const sync = new BrainSync(githubClient, config.basePath, config.writeRetries);
   const brain = new Brain(sync);
-  const server = createServer(brain);
+  const kb = new KnowledgeBase(githubClient, config.basePath, config.writeRetries);
+  const server = createServer(brain, kb);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

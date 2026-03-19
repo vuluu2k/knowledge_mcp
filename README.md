@@ -80,7 +80,8 @@ brain/
 ├── notes/ideas.md
 ├── notes/learning.md
 ├── goals/short-term.md
-└── goals/long-term.md
+├── goals/long-term.md
+└── knowledge/general.md    ← knowledge base
 ```
 
 ### Cách 2: Thủ công
@@ -198,6 +199,15 @@ Hoặc cấu hình thủ công trong `.claude/settings.json`:
 | `addNote` | `content`, `file` (ideas/learning) | Thêm ghi chú |
 | `saveToInbox` | `content` | Lưu nhanh vào inbox |
 
+### Knowledge Base
+
+| Tool | Input | Mô tả |
+|------|-------|--------|
+| `listTopics` | — | Xem danh sách topics (chỉ tên, không đọc nội dung) |
+| `getKnowledge` | `topic` | Đọc toàn bộ entries trong 1 topic |
+| `addKnowledge` | `topic`, `title`, `content` | Thêm kiến thức, tự tạo topic nếu chưa có |
+| `searchKnowledge` | `query` | Tìm kiếm keyword across tất cả topics |
+
 ---
 
 ## Bắt đầu sử dụng
@@ -233,31 +243,144 @@ Hoặc cấu hình thủ công trong `.claude/settings.json`:
 
 ---
 
+## Knowledge Base — Hệ thống kiến thức
+
+Knowledge base cho phép lưu trữ kiến thức theo topic và tìm kiếm lại khi cần. Kiến thức được tổ chức trong folder `knowledge/`, mỗi topic là 1 file markdown.
+
+### Cấu trúc
+
+```
+brain/knowledge/
+├── javascript.md     ← topic về JS
+├── git.md            ← topic về Git
+├── docker.md         ← topic về Docker
+└── cooking.md        ← không chỉ code — lưu gì cũng được
+```
+
+### Format mỗi topic file
+
+Mỗi entry là 1 heading `##` với nội dung bên dưới:
+
+```markdown
+# JavaScript
+
+## var vs let vs const
+
+- `var`: function-scoped, hoisted → tránh dùng
+- `let`: block-scoped, có thể reassign
+- `const`: block-scoped, không thể reassign
+
+## Promise vs async/await
+
+Promise là cách xử lý bất đồng bộ trong JS.
+async/await là syntax sugar cho Promise...
+```
+
+### Ví dụ sử dụng
+
+#### Hỏi kiến thức đã lưu
+
+```
+User: "Nhắc lại cách undo commit trong git?"
+
+Claude:
+  1. searchKnowledge("undo commit")
+  2. Tìm thấy entry "Undo last commit" trong topic "git"
+  3. Trả lời: git reset --soft HEAD~1
+```
+
+#### Lưu kiến thức mới
+
+```
+User: "Lưu lại cách tối ưu Dockerfile cho Node.js"
+
+Claude:
+  1. addKnowledge("docker", "Dockerfile tối ưu cho Node.js", "FROM node:20-alpine...")
+  2. Trả lời: Đã lưu vào topic docker
+```
+
+#### Tạo topic mới tự động
+
+```
+User: "Ghi nhớ: trứng luộc lòng đào cần đúng 6 phút 30 giây"
+
+Claude:
+  1. addKnowledge("cooking", "Trứng luộc lòng đào", "Nước sôi → thả trứng → 6:30 → ngâm đá")
+  2. File cooking.md được tạo tự động nếu chưa có
+```
+
+#### Xem có những topic gì
+
+```
+User: "Tôi đã lưu những kiến thức gì?"
+
+Claude:
+  1. listTopics()
+  2. Trả về: javascript, git, docker, cooking
+  → Chỉ 1 API call, không đọc nội dung file nào
+```
+
+#### Đọc chi tiết 1 topic
+
+```
+User: "Cho tôi xem hết kiến thức về Docker"
+
+Claude:
+  1. getKnowledge("docker")
+  2. Trả về tất cả entries: Các lệnh cơ bản, Dockerfile tối ưu, Docker Compose...
+```
+
+#### Tìm kiếm cross-topic
+
+```
+User: "Tôi có ghi gì về async không?"
+
+Claude:
+  1. searchKnowledge("async")
+  2. Tìm thấy entry "Promise vs async/await" trong topic "javascript"
+  3. Trả về nội dung match
+```
+
+### Flow tiết kiệm token
+
+| Bước | API calls | Token |
+|------|-----------|-------|
+| `listTopics()` | 1 | Chỉ tên file, ~50 bytes |
+| `getKnowledge("git")` | 1 (cached 30s) | Chỉ 1 file |
+| `searchKnowledge("x")` | 1 + N (cached) | Lần đầu load, các lần sau free |
+| `addKnowledge(...)` | 2 (read + write) | Chỉ 1 file |
+
+So với lưu hết vào 1 file: knowledge tách topic nên khi đọc chỉ load đúng cái cần, không phải load toàn bộ.
+
+---
+
 ## Cấu trúc source code
 
 ```
 src/
-├── index.ts          # Entry point — khởi tạo server + stdio transport
-├── mcp.ts            # Đăng ký tất cả MCP tools
-├── config.ts         # Load biến môi trường
-├── logger.ts         # Structured JSON logger (ghi ra stderr)
-├── errors.ts         # Error hierarchy (NotFoundError, ConflictError...)
+├── index.ts            # Entry point — khởi tạo server + stdio transport
+├── mcp.ts              # Đăng ký tất cả MCP tools
+├── config.ts           # Load biến môi trường
+├── logger.ts           # Structured JSON logger (ghi ra stderr)
+├── errors.ts           # Error hierarchy (NotFoundError, ConflictError...)
 ├── core/
-│   ├── brain.ts      # Facade chính — đọc/ghi/init brain qua GitHub
-│   ├── parser.ts     # Parse markdown ↔ structured data
-│   └── aggregator.ts # Truy vấn cross-file (tổng hợp tasks)
+│   ├── brain.ts        # Facade chính — đọc/ghi/init brain qua GitHub
+│   ├── parser.ts       # Parse markdown ↔ structured data
+│   ├── knowledge.ts    # Knowledge base — lưu/tìm kiến thức theo topic
+│   └── aggregator.ts   # Truy vấn cross-file (tổng hợp tasks)
 ├── github/
-│   ├── client.ts     # Octokit wrapper (getFile, updateFile, createFiles)
-│   └── sync.ts       # Map brain section → GitHub file path + retry
+│   ├── client.ts       # Octokit wrapper (getFile, updateFile, listDirectory...)
+│   └── sync.ts         # Map brain section → GitHub file path + retry
 ├── tools/
-│   ├── helpers.ts    # toolHandler wrapper (error handling + logging)
-│   ├── brain.ts      # Tool: initBrain
-│   ├── tasks.ts      # Tools: getTasks, addTask, markTaskDone...
-│   ├── notes.ts      # Tools: getNotes, addNote, getGoals
-│   └── inbox.ts      # Tools: getInbox, saveToInbox
+│   ├── helpers.ts      # toolHandler wrapper (error handling + logging)
+│   ├── brain.ts        # Tool: initBrain
+│   ├── tasks.ts        # Tools: getTasks, addTask, markTaskDone...
+│   ├── notes.ts        # Tools: getNotes, addNote, getGoals
+│   ├── inbox.ts        # Tools: getInbox, saveToInbox
+│   └── knowledge.ts    # Tools: listTopics, getKnowledge, addKnowledge, searchKnowledge
 └── types/
-    ├── brain.ts      # Types: FileContent, BrainSection, Note, Goal
-    └── task.ts       # Types: Task, TaskStatus, TaskPriority
+    ├── brain.ts        # Types: FileContent, BrainSection, Note, Goal
+    └── task.ts         # Types: Task, TaskStatus, TaskPriority
 ```
 
 ---

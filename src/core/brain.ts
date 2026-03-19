@@ -45,6 +45,10 @@ const BRAIN_TEMPLATES: Array<{ section: string; content: string }> = [
     section: "goals/long-term.md",
     content: "# Long-Term Goals\n\n",
   },
+  {
+    section: "knowledge/general.md",
+    content: "# General\n\n## Welcome\n\nThis is your knowledge base. Add entries with `addKnowledge` tool.\n",
+  },
 ];
 
 export class Brain {
