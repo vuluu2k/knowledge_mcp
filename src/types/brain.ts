@@ -15,6 +15,7 @@ export type BrainSection =
   | "inbox"
   | "tasks/today"
   | "tasks/backlog"
+  | "tasks/archive"
   | "notes/ideas"
   | "notes/learning"
   | "goals/short-term"
@@ -24,6 +25,7 @@ export const BRAIN_FILE_MAP: Record<BrainSection, string> = {
   inbox: "inbox/capture.md",
   "tasks/today": "tasks/today.md",
   "tasks/backlog": "tasks/backlog.md",
+  "tasks/archive": "tasks/archive.md",
   "notes/ideas": "notes/ideas.md",
   "notes/learning": "notes/learning.md",
   "goals/short-term": "goals/short-term.md",

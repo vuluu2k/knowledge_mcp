@@ -132,4 +132,22 @@ Each action includes: type, reason (why triggered), impact (what changed), detai
       engine.run({ dryRun, only: "autoInjectTask" })
     )
   );
+
+  server.registerTool(
+    "autoArchive",
+    {
+      description:
+        "Archive completed tasks via auto-action engine. Moves all [x] tasks from today and backlog to archive.md with timestamps. Part of the auto-optimization system.",
+      inputSchema: {
+        dryRun: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe("Preview only (default true)"),
+      },
+    },
+    toolHandler("autoArchive", async ({ dryRun }) =>
+      engine.run({ dryRun, only: "autoArchive" })
+    )
+  );
 }

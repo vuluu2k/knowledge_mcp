@@ -436,3 +436,64 @@ export function appendInboxItem(content: string, text: string): string {
   const base = normalized.endsWith("\n") ? normalized : normalized + "\n";
   return base + newLine + "\n";
 }
+
+// ─── Archive ────────────────────────────────────────────────
+
+/**
+ * Appends archived task lines under the correct date heading in archive.md.
+ * Creates the date heading if it doesn't exist (inserted at top, after `# Archive` header).
+ */
+export function appendToArchive(
+  archiveContent: string,
+  entries: string[],
+  dateStr: string
+): string {
+  if (entries.length === 0) return archiveContent;
+
+  const normalized = normalizeLineEndings(archiveContent);
+  const lines = normalized.split("\n");
+
+  const heading = `## ${dateStr}`;
+
+  // Find existing date heading
+  let headingIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === heading) {
+      headingIndex = i;
+      break;
+    }
+  }
+
+  if (headingIndex >= 0) {
+    // Find insertion point: after the heading and existing entries, before next ## or EOF
+    let insertAt = headingIndex + 1;
+    while (insertAt < lines.length) {
+      const trimmed = lines[insertAt].trim();
+      if (trimmed.startsWith("## ")) break;
+      insertAt++;
+    }
+    // Back up past trailing blank lines
+    while (insertAt > headingIndex + 1 && !lines[insertAt - 1].trim()) {
+      insertAt--;
+    }
+    lines.splice(insertAt, 0, ...entries);
+  } else {
+    // Insert new date heading after the # Archive header + blank line
+    let insertAt = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].trim().startsWith("# ")) {
+        insertAt = i + 1;
+        // Skip blank lines after header
+        while (insertAt < lines.length && !lines[insertAt].trim()) insertAt++;
+        break;
+      }
+    }
+    // Insert before the first existing ## (newest date on top)
+    const block = [heading, "", ...entries, ""];
+    lines.splice(insertAt, 0, ...block);
+  }
+
+  let result = lines.join("\n");
+  if (!result.endsWith("\n")) result += "\n";
+  return result;
+}

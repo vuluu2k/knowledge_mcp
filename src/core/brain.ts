@@ -160,6 +160,10 @@ const BRAIN_TEMPLATES: Array<{ section: string; content: string }> = [
     content: "# Long-Term Goals\n\n",
   },
   {
+    section: "tasks/archive.md",
+    content: "# Archive\n\nCompleted tasks are archived here by date.\n",
+  },
+  {
     section: "knowledge/general.md",
     content:
       "---\nname: General\ndescription: General knowledge and notes\ntags: general\n---\n\n## Welcome\n\nThis is your knowledge base. Add entries with the addKnowledge tool.\n",

@@ -2,7 +2,7 @@ import type { Brain } from "./brain.js";
 import type { GitHubClient } from "../github/client.js";
 import type { ActionType, AutoActionResult } from "../types/action.js";
 import type { Goal } from "../types/brain.js";
-import { parseTasks, removeTasksByIds, replaceTaskWithLines, appendTask } from "./parser.js";
+import { parseTasks, removeTasksByIds, replaceTaskWithLines, appendTask, appendToArchive } from "./parser.js";
 import { evaluateAllRules, type RuleContext, type RuleMutations } from "./rules.js";
 import { isNotFound } from "../errors.js";
 import { getLogger } from "../logger.js";
@@ -12,6 +12,7 @@ import { getLogger } from "../logger.js";
 export class AutoActionEngine {
   private todayPath: string;
   private backlogPath: string;
+  private archivePath: string;
 
   constructor(
     private brain: Brain,
@@ -20,6 +21,7 @@ export class AutoActionEngine {
   ) {
     this.todayPath = `${basePath}/tasks/today.md`;
     this.backlogPath = `${basePath}/tasks/backlog.md`;
+    this.archivePath = `${basePath}/tasks/archive.md`;
   }
 
   /**
@@ -83,6 +85,7 @@ export class AutoActionEngine {
     // 6. Apply mutations to file contents
     let newToday = todayContent;
     let newBacklog = backlogContent;
+    let archiveFile: { path: string; content: string } | undefined;
 
     newToday = this.applyMutations(
       newToday,
@@ -100,13 +103,26 @@ export class AutoActionEngine {
       []
     );
 
-    // 7. Batch commit — only changed files
+    // 7. Handle archive mutations
+    if (mutations.archiveAppendLines.length > 0) {
+      const archiveContent = await this.readFile(this.archivePath);
+      const baseArchive = archiveContent || "# Archive\n\nCompleted tasks are archived here by date.\n";
+      const newArchive = appendToArchive(baseArchive, mutations.archiveAppendLines, ctx.todayStr);
+      if (newArchive !== archiveContent) {
+        archiveFile = { path: this.archivePath, content: newArchive };
+      }
+    }
+
+    // 8. Batch commit — only changed files
     const files: Array<{ path: string; content: string }> = [];
     if (newToday !== todayContent) {
       files.push({ path: this.todayPath, content: newToday });
     }
     if (newBacklog !== backlogContent) {
       files.push({ path: this.backlogPath, content: newBacklog });
+    }
+    if (archiveFile) {
+      files.push(archiveFile);
     }
 
     if (files.length > 0) {

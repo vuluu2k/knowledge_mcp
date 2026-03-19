@@ -3,7 +3,8 @@ export type ActionType =
   | "autoSplitTask"
   | "autoPrioritize"
   | "autoCleanup"
-  | "autoInjectTask";
+  | "autoInjectTask"
+  | "autoArchive";
 
 export interface PlannedAction {
   type: ActionType;

@@ -22,6 +22,8 @@ export interface RuleMutations {
   /** Replacements: taskId → new lines (for split). */
   todayReplace: Array<{ taskId: string; newLines: string[] }>;
   backlogReplace: Array<{ taskId: string; newLines: string[] }>;
+  /** Lines to append to archive.md (for autoArchive). */
+  archiveAppendLines: string[];
 }
 
 export interface RuleResult {
@@ -36,6 +38,7 @@ function emptyMutations(): RuleMutations {
     todayAppendLines: [],
     todayReplace: [],
     backlogReplace: [],
+    archiveAppendLines: [],
   };
 }
 
@@ -303,6 +306,47 @@ export function ruleAutoInjectTask(ctx: RuleContext): RuleResult {
   return { actions, mutations: mut };
 }
 
+// ─── Rule: autoArchive ────────────────────────────────────
+// Move completed tasks to archive.md
+
+export function ruleAutoArchive(ctx: RuleContext): RuleResult {
+  const mut = emptyMutations();
+  const actions: PlannedAction[] = [];
+
+  const doneTasks = [
+    ...ctx.todayTasks.filter((t) => t.status === "done" && !ctx.claimed.has(t.id)),
+    ...ctx.backlogTasks.filter((t) => t.status === "done" && !ctx.claimed.has(t.id)),
+  ];
+
+  if (doneTasks.length === 0) return { actions, mutations: mut };
+
+  const now = new Date().toISOString().replace("T", " ").split(".")[0];
+
+  for (const task of doneTasks) {
+    claim(ctx, [task.id]);
+    const isToday = task.source === "tasks/today";
+    if (isToday) {
+      mut.todayRemoveIds.push(task.id);
+    } else {
+      mut.backlogRemoveIds.push(task.id);
+    }
+    mut.archiveAppendLines.push(
+      `${task.rawLine} — archived ${now} from ${task.source}`
+    );
+  }
+
+  actions.push({
+    type: "autoArchive",
+    reason: `${doneTasks.length} completed task(s) ready for archiving`,
+    impact: "Moved completed tasks to archive.md",
+    details: doneTasks.map(
+      (t) => `Archive "${t.text}" from ${t.source}`
+    ),
+  });
+
+  return { actions, mutations: mut };
+}
+
 // ─── Evaluate All Rules ────────────────────────────────────
 
 export function evaluateAllRules(
@@ -322,6 +366,7 @@ export function evaluateAllRules(
     { type: "autoPrioritize", run: () => ruleAutoPrioritize(ctx) },
     { type: "autoCleanup", run: () => ruleAutoCleanup(ctx) },
     { type: "autoInjectTask", run: () => ruleAutoInjectTask(ctx) },
+    { type: "autoArchive", run: () => ruleAutoArchive(ctx) },
   ];
 
   for (const rule of rules) {
@@ -334,6 +379,7 @@ export function evaluateAllRules(
     merged.todayAppendLines.push(...mutations.todayAppendLines);
     merged.todayReplace.push(...mutations.todayReplace);
     merged.backlogReplace.push(...mutations.backlogReplace);
+    merged.archiveAppendLines.push(...mutations.archiveAppendLines);
   }
 
   return { actions: allActions, mutations: merged };

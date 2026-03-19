@@ -11,6 +11,7 @@ import { ContextEngine } from "./core/context.js";
 import { StatsEngine } from "./core/stats.js";
 import { BehaviorEngine } from "./core/behavior.js";
 import { AutoActionEngine } from "./core/autoAction.js";
+import { ArchiveEngine } from "./core/archive.js";
 import { loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
 
@@ -43,7 +44,8 @@ async function main() {
   const stats = new StatsEngine(brain, githubClient, config.basePath);
   const behavior = new BehaviorEngine(brain, githubClient, config.basePath);
   const autoAction = new AutoActionEngine(brain, githubClient, config.basePath);
-  const server = createServer(brain, kb, insights, context, stats, behavior, autoAction);
+  const archive = new ArchiveEngine(githubClient, config.basePath);
+  const server = createServer(brain, kb, insights, context, stats, behavior, autoAction, archive);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

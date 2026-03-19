@@ -11,11 +11,13 @@ import { registerContextTools } from "./tools/context.js";
 import { registerStatsTools } from "./tools/stats.js";
 import { registerBehaviorTools } from "./tools/behavior.js";
 import { registerAutoActionTools } from "./tools/autoAction.js";
+import { registerArchiveTools } from "./tools/archive.js";
 import type { InsightsEngine } from "./core/insights.js";
 import type { ContextEngine } from "./core/context.js";
 import type { StatsEngine } from "./core/stats.js";
 import type { BehaviorEngine } from "./core/behavior.js";
 import type { AutoActionEngine } from "./core/autoAction.js";
+import type { ArchiveEngine } from "./core/archive.js";
 
 const SERVER_INSTRUCTIONS = `You are connected to the Knowledge Brain MCP server — a personal knowledge management system backed by a GitHub repository. Every action you perform creates a git commit, providing full version control and audit trail.
 
@@ -30,7 +32,7 @@ This makes the system feel native to the user while keeping technical terms clea
 
 ## Architecture
 Data is stored as markdown files in a GitHub repo:
-- brain/tasks/ — today.md (công việc hôm nay) and backlog.md (tồn đọng)
+- brain/tasks/ — today.md (công việc hôm nay), backlog.md (tồn đọng), and archive.md (lưu trữ tasks hoàn thành)
 - brain/notes/ — ideas.md (ý tưởng) and learning.md (ghi chú học tập)
 - brain/goals/ — short-term.md (mục tiêu ngắn hạn) and long-term.md (mục tiêu dài hạn)
 - brain/inbox/ — capture.md (hộp thư đến)
@@ -65,13 +67,18 @@ Data is stored as markdown files in a GitHub repo:
 - getInsights — aggregated data dump (task lists, quality issues, overdue items, activity timeline, goals).
 - analyzeBehavior — the SMART tool. Runs 5 algorithmic detectors (productivity, procrastination, task-structure, goal-alignment, workload) and returns structured insights with severity, evidence, and suggestions. Also returns a healthScore (0-100) and detected patterns (chronotype, peak hours, trends). USE THIS when the user asks "how am I doing?", "analyze my productivity", "what's wrong with my workflow?", or any behavioral analysis question. Present healthScore first, then insights grouped by severity.
 
+**Archive** — when the user says "archive", "clean up done tasks", "dọn tasks đã xong", "move finished tasks", "xem lịch sử hoàn thành":
+- archiveDoneTasks — moves all completed [x] tasks from today and backlog to archive.md with timestamps. One atomic commit.
+- getArchive — read completed task history grouped by date.
+
 **Auto Actions** — self-optimizing task engine. When the user says "optimize my tasks", "clean up", "reschedule", or asks you to auto-organize:
-- runAutoActions — runs ALL auto-optimizations (reschedule, split, prioritize, cleanup, inject). ALWAYS run with dryRun=true first to preview, then dryRun=false to apply. All changes in ONE commit.
+- runAutoActions — runs ALL auto-optimizations (reschedule, split, prioritize, cleanup, inject, archive). ALWAYS run with dryRun=true first to preview, then dryRun=false to apply. All changes in ONE commit.
 - autoReschedule — move overdue backlog tasks to today
 - autoSplitTask — break oversized/stuck tasks into plan → execute → verify
 - autoPrioritize — promote top backlog items to today
 - autoCleanup — remove duplicates and stale abandoned tasks
 - autoInjectTask — create tasks for neglected goals
+- autoArchive — move completed tasks to archive.md
 
 **Initialization** — only for first-time setup:
 - initBrain — creates the full folder structure in one commit. Only needed once on a new/empty repo.
@@ -95,7 +102,8 @@ export function createServer(
   context: ContextEngine,
   stats: StatsEngine,
   behavior: BehaviorEngine,
-  autoAction: AutoActionEngine
+  autoAction: AutoActionEngine,
+  archive: ArchiveEngine
 ): McpServer {
   const server = new McpServer(
     {
@@ -117,6 +125,7 @@ export function createServer(
   registerStatsTools(server, stats);
   registerBehaviorTools(server, behavior);
   registerAutoActionTools(server, autoAction);
+  registerArchiveTools(server, archive);
 
   return server;
 }
