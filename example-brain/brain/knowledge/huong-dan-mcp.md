@@ -286,5 +286,5 @@ Hoặc nếu đã clone:
 - **Knowledge base là vĩnh viễn** — lưu 1 lần, dùng mãi mãi
 - **Mọi thay đổi có git history** — mỗi hành động là 1 commit, có thể revert
 - **Không giới hạn ngôn ngữ** — tiếng Việt, tiếng Anh, mix đều được
-- **AI tìm knowledge trước khi trả lời** — nếu đã lưu, AI dùng dữ liệu đó, không phịa
+- **AI tìm knowledge trước khi trả lời** — nếu đã lưu, AI dùng dữ liệu đó, không bịa
 - **Luôn preview trước khi auto-optimize** — dryRun=true mặc định, xác nhận rồi mới áp dụng

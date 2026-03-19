@@ -23,7 +23,7 @@ Bạn nói                              AI làm
 
 **AI thông thường quên sau mỗi cuộc hội thoại.** Knowledge MCP cho AI bộ nhớ dài hạn — lưu một lần, dùng mãi mãi.
 
-- **Trí nhớ vĩnh viễn** — Kiến thức lưu trên GitHub, không bao giờ mất. AI trả lời dựa trên dữ liệu bạn đã lưu, không phịa.
+- **Trí nhớ vĩnh viễn** — Kiến thức lưu trên GitHub, không bao giờ mất. AI trả lời dựa trên dữ liệu bạn đã lưu, không bịa.
 - **Quản lý công việc bằng giọng nói tự nhiên** — Thêm task, đánh dấu xong, xem backlog — không cần mở app nào khác.
 - **Knowledge base cá nhân** — Lưu quy trình, chính sách, ghi chú kỹ thuật, bất kỳ thứ gì. AI tìm và trả lời chính xác khi bạn hỏi lại.
 - **Phân tích năng suất** — AI phân tích thói quen làm việc, phát hiện vấn đề, gợi ý cải thiện cụ thể.
@@ -410,7 +410,7 @@ tags: chính sách, đổi trả, bảo hành
 2. **Title match** — match heading `##`
 3. **Content match** — match nội dung
 
-AI tự động tìm trong knowledge base trước khi trả lời. Nếu có dữ liệu đã lưu, AI dùng dữ liệu đó — không phịa.
+AI tự động tìm trong knowledge base trước khi trả lời. Nếu có dữ liệu đã lưu, AI dùng dữ liệu đó — không bịa.
 
 ---
 
