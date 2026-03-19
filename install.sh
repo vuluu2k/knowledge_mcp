@@ -4,7 +4,10 @@
 #  Knowledge Brain MCP Server - Trình cài đặt tự động
 #  Hỗ trợ: Claude Desktop, Claude Code, Cursor, Windsurf, Augment, Codex
 #
-#  Dùng từ xa:
+#  Dùng từ xa (khuyên dùng):
+#    curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.sh -o install.sh && bash install.sh
+#
+#  Hoặc:
 #    curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.sh | bash
 #
 #  Dùng sau khi clone:
@@ -194,7 +197,7 @@ install_mcp() {
         if [[ "$REMOVE" =~ ^[CcYy]$ ]]; then
           rm -rf "$INSTALL_DIR"
           info "Đang clone repository..."
-          git clone "$REPO_URL" "$INSTALL_DIR"
+          git clone "$REPO_URL" "$INSTALL_DIR" < /dev/null
         else
           error "Không thể cài đặt. Xóa thư mục hoặc chọn đường dẫn khác."
           exit 1
@@ -202,21 +205,21 @@ install_mcp() {
       fi
     else
       info "Đang clone repository..."
-      git clone "$REPO_URL" "$INSTALL_DIR"
+      git clone "$REPO_URL" "$INSTALL_DIR" < /dev/null
     fi
   fi
 
   cd "$INSTALL_DIR"
 
   info "Đang cài dependencies..."
-  if ! npm install 2>&1; then
+  if ! npm install < /dev/null; then
     error "npm install thất bại! Kiểm tra Node.js version và kết nối mạng."
     echo "  Thử chạy thủ công: cd $INSTALL_DIR && npm install"
     exit 1
   fi
 
   info "Đang build TypeScript..."
-  if ! npm run build 2>&1; then
+  if ! npm run build < /dev/null; then
     error "npm run build thất bại!"
     echo "  Thử chạy thủ công: cd $INSTALL_DIR && npm run build"
     exit 1
@@ -577,4 +580,8 @@ main() {
   print_summary
 }
 
+# Wrap trong { } để đảm bảo bash đọc hết script trước khi chạy
+# (cần thiết khi dùng curl | bash)
+{
 main "$@"
+}

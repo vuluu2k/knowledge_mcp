@@ -86,7 +86,7 @@ AI:  ## Insights
 ### Cách 1: Một lệnh duy nhất
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.sh -o install.sh && bash install.sh
 ```
 
 Clone, install, build, cấu hình `.env` interactive, in ra config sẵn cho AI platform của bạn.

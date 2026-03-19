@@ -119,7 +119,7 @@ if [ -d ".git" ]; then
 else
   warn "Không phải git repo — không thể pull."
   echo "  Để cập nhật, cài lại:"
-  echo "  curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.sh | bash"
+  echo "  curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.sh -o install.sh && bash install.sh"
   exit 1
 fi
 
