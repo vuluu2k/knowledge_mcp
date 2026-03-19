@@ -163,19 +163,41 @@ install_mcp() {
     INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
     INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
 
-    if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/dist/index.js" ]; then
-      success "MCP server đã có tại $INSTALL_DIR"
-      read -rp "  Cập nhật lên bản mới nhất? (c/K): " UPDATE < /dev/tty
-      if [[ "$UPDATE" =~ ^[CcYy]$ ]]; then
-        info "Đang cập nhật..."
+    if [ -d "$INSTALL_DIR" ]; then
+      if [ -f "$INSTALL_DIR/dist/index.js" ]; then
+        # Case 1: Đã cài đầy đủ → hỏi update
+        success "MCP server đã có tại $INSTALL_DIR"
+        read -rp "  Cập nhật lên bản mới nhất? (c/K): " UPDATE < /dev/tty
+        if [[ "$UPDATE" =~ ^[CcYy]$ ]]; then
+          info "Đang cập nhật..."
+          cd "$INSTALL_DIR"
+          git pull origin main 2>/dev/null || git pull 2>/dev/null || warn "Git pull thất bại, dùng bản hiện tại"
+          npm install --silent
+          npm run build --silent
+          success "Cập nhật thành công"
+          cd - > /dev/null
+          MCP_INDEX="$INSTALL_DIR/dist/index.js"
+          return
+        fi
+      elif [ -d "$INSTALL_DIR/.git" ]; then
+        # Case 2: Thư mục là git repo nhưng chưa build (clone cũ lỗi) → pull + rebuild
+        warn "Thư mục đã tồn tại nhưng chưa build: $INSTALL_DIR"
+        info "Đang pull và build lại..."
         cd "$INSTALL_DIR"
-        git pull origin main 2>/dev/null || git pull 2>/dev/null || warn "Git pull thất bại, dùng bản hiện tại"
-        npm install --silent
-        npm run build --silent
-        success "Cập nhật thành công"
+        git pull origin main 2>/dev/null || git pull 2>/dev/null || true
         cd - > /dev/null
-        MCP_INDEX="$INSTALL_DIR/dist/index.js"
-        return
+      else
+        # Case 3: Thư mục tồn tại nhưng không phải repo → hỏi xóa
+        warn "Thư mục đã tồn tại nhưng không phải git repo: $INSTALL_DIR"
+        read -rp "  Xóa và cài lại? (c/K): " REMOVE < /dev/tty
+        if [[ "$REMOVE" =~ ^[CcYy]$ ]]; then
+          rm -rf "$INSTALL_DIR"
+          info "Đang clone repository..."
+          git clone "$REPO_URL" "$INSTALL_DIR"
+        else
+          error "Không thể cài đặt. Xóa thư mục hoặc chọn đường dẫn khác."
+          exit 1
+        fi
       fi
     else
       info "Đang clone repository..."
