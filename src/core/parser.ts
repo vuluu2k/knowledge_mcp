@@ -8,9 +8,11 @@ import type { Note, Goal, InboxItem } from "../types/brain.js";
 const TASK_REGEX = /^(\s*)(?:[-*]|\d+\.)\s*\[([xX ])\]\s*(.+)$/;
 const TAG_REGEX = /#(\w[\w-]*)/g;
 const DUE_REGEX = /@due\((\d{4}-\d{2}-\d{2})\)/;
+const ESTIMATE_REGEX = /@est\(([^)]+)\)/;
 const PRIORITY_REGEX = /^(!!!|!!|!)\s*/;
 const FRONTMATTER_FENCE = /^---\s*$/;
 const TIMESTAMP_REGEX = /^\[(\d{4}-\d{2}-\d{2}(?:[T ]\S+)?)\]\s*/;
+const NESTED_META_REGEX = /^\s+[-*]\s*(\w[\w-]*)\s*:\s*(.+)$/;
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -55,6 +57,80 @@ function extractDueDate(text: string): { dueDate?: string; cleaned: string } {
   };
 }
 
+function parseEstimateValue(raw: string): number | undefined {
+  const hourMatch = raw.match(/(\d+(?:\.\d+)?)\s*h/i);
+  const minMatch = raw.match(/(\d+)\s*m/i);
+  let minutes = 0;
+  if (hourMatch) minutes += parseFloat(hourMatch[1]) * 60;
+  if (minMatch) minutes += parseInt(minMatch[1]);
+  return minutes > 0 ? minutes : undefined;
+}
+
+function extractEstimate(text: string): { estimate?: number; cleaned: string } {
+  const match = text.match(ESTIMATE_REGEX);
+  if (!match) return { cleaned: text };
+  return {
+    estimate: parseEstimateValue(match[1]),
+    cleaned: text.replace(ESTIMATE_REGEX, "").trim(),
+  };
+}
+
+function parsePriorityValue(raw: string): TaskPriority | undefined {
+  const lower = raw.toLowerCase().trim();
+  if (lower === "high" || lower === "h") return "high";
+  if (lower === "medium" || lower === "med" || lower === "m") return "medium";
+  if (lower === "low" || lower === "l") return "low";
+  return undefined;
+}
+
+interface NestedMeta {
+  priority?: TaskPriority;
+  dueDate?: string;
+  estimate?: number;
+  tags?: string[];
+}
+
+/**
+ * Looks ahead from startIndex for indented sub-bullets with key: value metadata.
+ * Stops at the first non-indented line, blank line, or another task.
+ */
+function parseNestedMetadata(lines: string[], startIndex: number): NestedMeta {
+  const result: NestedMeta = {};
+
+  for (let i = startIndex; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.match(/^\s/) || !line.trim()) break;
+    if (TASK_REGEX.test(line)) break;
+
+    const metaMatch = line.match(NESTED_META_REGEX);
+    if (!metaMatch) continue;
+
+    const [, key, value] = metaMatch;
+    switch (key.toLowerCase()) {
+      case "priority":
+        result.priority = parsePriorityValue(value);
+        break;
+      case "estimate":
+      case "est":
+        result.estimate = parseEstimateValue(value);
+        break;
+      case "tags":
+      case "tag":
+        result.tags = value.split(",").map((t) => t.trim()).filter(Boolean);
+        break;
+      case "due":
+      case "duedate":
+      case "due_date": {
+        const dateStr = value.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) result.dueDate = dateStr;
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
 function extractTags(text: string): { tags: string[]; cleaned: string } {
   const tags: string[] = [];
   const tagRegex = new RegExp(TAG_REGEX.source, TAG_REGEX.flags);
@@ -85,15 +161,21 @@ export function parseTasks(content: string, source: string): Task[] {
     remaining = c1;
     const { dueDate, cleaned: c2 } = extractDueDate(remaining);
     remaining = c2;
+    const { estimate, cleaned: c3 } = extractEstimate(remaining);
+    remaining = c3;
     const { tags, cleaned: text } = extractTags(remaining);
+
+    // Look ahead for nested metadata sub-bullets (priority: high, estimate: 2h, etc.)
+    const nested = parseNestedMetadata(lines, i + 1);
 
     tasks.push({
       id: generateId(source, rawText.trim()),
       text,
       status,
-      tags,
-      priority,
-      dueDate,
+      tags: [...new Set([...tags, ...(nested.tags ?? [])])],
+      priority: nested.priority ?? priority,
+      dueDate: nested.dueDate ?? dueDate,
+      estimate: nested.estimate ?? estimate,
       rawLine: lines[i],
       lineNumber: i,
       source,

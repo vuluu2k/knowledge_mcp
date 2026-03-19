@@ -7,7 +7,11 @@ import { registerNoteTools } from "./tools/notes.js";
 import { registerInboxTools } from "./tools/inbox.js";
 import { registerKnowledgeTools } from "./tools/knowledge.js";
 import { registerInsightTools } from "./tools/insights.js";
+import { registerContextTools } from "./tools/context.js";
+import { registerStatsTools } from "./tools/stats.js";
 import type { InsightsEngine } from "./core/insights.js";
+import type { ContextEngine } from "./core/context.js";
+import type { StatsEngine } from "./core/stats.js";
 
 const SERVER_INSTRUCTIONS = `You are connected to the Knowledge Brain MCP server — a personal knowledge management system backed by a GitHub repository. Every action you perform creates a git commit, providing full version control and audit trail.
 
@@ -26,7 +30,7 @@ Data is stored as markdown files in a GitHub repo:
 
 **Tasks** — when the user mentions work, to-do items, or asks what they need to do:
 - getTodayTasks / getBacklog / getTasks — view tasks
-- addTask — add new task (default: today; use backlog for non-urgent)
+- addTask — add new task (default: today; use backlog for non-urgent). Tasks support inline metadata: priority (!/!!/!!!), tags (#tag), due date (@due(YYYY-MM-DD)), estimate (@est(2h)). Also supports nested metadata sub-bullets (priority: high, estimate: 2h, tags: x, y).
 - markTaskDone — complete a task (supports fuzzy text matching)
 
 **Notes & Goals** — when the user wants to record ideas, learnings, or goals:
@@ -43,8 +47,12 @@ Data is stored as markdown files in a GitHub repo:
 - listTopics — show all available topics
 - getKnowledge — read all entries from a specific topic
 
-**Insights & Analytics** — when the user asks about their productivity, habits, or wants a review:
-- getInsights — generates a full behavior analysis report (task stats, quality issues, overdue items, activity patterns, goal alignment). After receiving the report, analyze and present: Insights (patterns), Problems (blockers), and Suggestions (actionable improvements). Be specific, cite evidence.
+**Context & Focus** — when the user starts their day or asks what to focus on:
+- getTodayContext — returns prioritized snapshot: pending/completed/overdue tasks, suggested top 3 focus tasks (scored by priority + deadline + estimate), and short-term goals for alignment check.
+
+**Stats & Analytics** — when the user asks about their productivity, habits, or stats:
+- getStats — behavioral metrics: completion rate, avg tasks/day, most active hour/day, stale tasks, tag distribution, estimate coverage.
+- getInsights — comprehensive behavior analysis report (task stats, quality issues, overdue items, activity patterns, goal alignment). After receiving the report, present: Insights (patterns), Problems (blockers), and Suggestions (actionable improvements). Be specific, cite evidence.
 
 **Initialization** — only for first-time setup:
 - initBrain — creates the full folder structure in one commit. Only needed once on a new/empty repo.
@@ -57,11 +65,17 @@ Data is stored as markdown files in a GitHub repo:
 
 3. **Smart task management**: Understand natural language — "done with X", "finished X", "completed X" all mean markTaskDone. "remind me to X", "I need to X", "add task X" all mean addTask.
 
-4. **Daily briefing**: When asked "what should I do today?" or similar, call getTodayTasks + getInbox + getGoals to give a comprehensive overview.
+4. **Daily briefing**: When asked "what should I do today?" or similar, call getTodayContext for a prioritized snapshot with suggested focus. Supplement with getInbox if there are unprocessed items.
 
 5. **Topic organization**: When saving knowledge, choose descriptive topic names and add relevant tags for better searchability. Group related information under the same topic.`;
 
-export function createServer(brain: Brain, kb: KnowledgeBase, insights: InsightsEngine): McpServer {
+export function createServer(
+  brain: Brain,
+  kb: KnowledgeBase,
+  insights: InsightsEngine,
+  context: ContextEngine,
+  stats: StatsEngine
+): McpServer {
   const server = new McpServer(
     {
       name: "knowledge-brain",
@@ -78,6 +92,8 @@ export function createServer(brain: Brain, kb: KnowledgeBase, insights: Insights
   registerInboxTools(server, brain);
   registerKnowledgeTools(server, kb);
   registerInsightTools(server, insights);
+  registerContextTools(server, context);
+  registerStatsTools(server, stats);
 
   return server;
 }

@@ -8,6 +8,8 @@ export interface Task {
   tags: string[];
   priority?: TaskPriority;
   dueDate?: string;
+  /** Estimated effort in minutes. Parsed from @est(2h), @est(30m), or nested `estimate: 2h`. */
+  estimate?: number;
   rawLine: string;
   lineNumber: number;
   source: string;

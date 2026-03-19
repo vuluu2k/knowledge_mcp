@@ -7,6 +7,8 @@ import { BrainSync } from "./github/sync.js";
 import { Brain } from "./core/brain.js";
 import { KnowledgeBase } from "./core/knowledge.js";
 import { InsightsEngine } from "./core/insights.js";
+import { ContextEngine } from "./core/context.js";
+import { StatsEngine } from "./core/stats.js";
 import { loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
 
@@ -35,7 +37,9 @@ async function main() {
   const brain = new Brain(sync);
   const kb = new KnowledgeBase(githubClient, config.basePath, config.writeRetries);
   const insights = new InsightsEngine(brain, githubClient, config.basePath);
-  const server = createServer(brain, kb, insights);
+  const context = new ContextEngine(brain);
+  const stats = new StatsEngine(brain, githubClient, config.basePath);
+  const server = createServer(brain, kb, insights, context, stats);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
