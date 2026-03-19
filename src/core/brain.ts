@@ -16,6 +16,119 @@ import {
   appendInboxItem,
 } from "./parser.js";
 
+// ─── Built-in knowledge: Hướng dẫn sử dụng MCP ─────────────
+
+const GUIDE_KNOWLEDGE = `---
+name: Hướng dẫn sử dụng Knowledge Brain MCP
+description: Cách sử dụng và làm việc hiệu quả với MCP server — quản lý task, kiến thức, phân tích năng suất
+tags: mcp, hướng dẫn, brain, knowledge, task, setup, workflow
+---
+
+## Bắt đầu nhanh
+
+Sau khi cài MCP và kết nối với AI (Claude, Cursor, Windsurf...), chỉ cần nói:
+
+\`\`\`
+"Khởi tạo brain cho tôi"
+\`\`\`
+
+AI sẽ tự động:
+- Tạo GitHub repo (private) nếu chưa có
+- Tạo toàn bộ cấu trúc brain trong 1 commit
+- Sẵn sàng dùng ngay
+
+## Cấu trúc Brain
+
+- inbox/capture.md — Ghi nhanh, chưa phân loại
+- tasks/today.md — Việc cần làm hôm nay
+- tasks/backlog.md — Việc để dành, chưa gấp
+- notes/ideas.md — Ý tưởng
+- notes/learning.md — Kiến thức học được
+- goals/short-term.md — Mục tiêu ngắn hạn
+- goals/long-term.md — Mục tiêu dài hạn
+- knowledge/*.md — Knowledge base theo topic
+
+Mỗi hành động tạo 1 git commit — có thể xem lịch sử, rollback bất kỳ lúc nào.
+
+## Quản lý công việc
+
+Thêm task:
+- "Thêm task: thiết kế landing page" → thêm vào today
+- "Thêm vào backlog: refactor module auth" → thêm vào backlog
+
+Task hỗ trợ metadata inline:
+- ! / !! / !!! — priority: low / medium / high
+- #tag — phân loại
+- @due(YYYY-MM-DD) — deadline
+- @est(Xh) hoặc @est(30m) — ước lượng thời gian
+
+Ví dụ: "Thêm task: !!! Fix API bug #backend @due(2025-04-01) @est(2h)"
+
+Xem task:
+- "Hôm nay tôi cần làm gì?" → today tasks
+- "Cho tôi xem backlog" → backlog
+
+Hoàn thành:
+- "Xong task review PR rồi" → fuzzy match và đánh dấu done
+
+## Ghi chú, Inbox, Mục tiêu
+
+Ghi chú:
+- "Ghi lại ý tưởng: xây dựng AI chatbot" → ideas.md
+- "Note vào learning: cách dùng Docker multi-stage" → learning.md
+
+Inbox (ghi nhanh):
+- "Nhớ giùm tôi: gọi khách lúc 3h chiều"
+- "Lưu nhanh: link bài viết hay"
+
+Mục tiêu:
+- "Tóm tắt goals của tôi"
+- "Cho tôi xem mục tiêu ngắn hạn"
+
+## Knowledge Base — Trí nhớ dài hạn
+
+Lưu kiến thức:
+- "Lưu kiến thức Docker: dùng alpine image để giảm size"
+- "Ghi nhớ: chính sách đổi trả 7 ngày, sản phẩm nguyên tem"
+
+Tra cứu:
+- "Chính sách bảo hành thế nào?" → tìm và trả lời từ dữ liệu đã lưu
+- "Liệt kê các chủ đề kiến thức" → danh sách topics
+
+AI tự động tìm trong knowledge base TRƯỚC khi trả lời. Nếu có dữ liệu → dùng. Nếu không → trả lời từ AI và đề nghị lưu.
+
+Search ranking: Tag match > Title match > Content match.
+
+## Phân tích năng suất
+
+- "Hôm nay tôi nên focus gì?" → top 3 tasks gợi ý, overdue, goals
+- "Thống kê năng suất" → completion rate, giờ peak, stale tasks
+- "Phân tích workflow" → 5 detectors: productivity, procrastination, task-structure, goal-alignment, workload → healthScore 0-100
+
+## Tự động tối ưu
+
+- "Tối ưu tasks cho tôi" → preview (dry run)
+- "OK, áp dụng đi" → commit thay đổi
+
+5 hành động: autoReschedule (chuyển overdue → today), autoSplitTask (chia task >4h), autoPrioritize (đẩy top backlog lên), autoCleanup (xóa trùng/bỏ hoang), autoInjectTask (tạo task cho goals bị bỏ quên).
+
+Luôn preview trước, xác nhận rồi mới áp dụng. 1 commit duy nhất.
+
+## Mẹo dùng hiệu quả
+
+- Nói ngắn gọn, đi thẳng vấn đề
+- Cho context khi lưu knowledge (đừng chỉ nói "nhớ cái này: 7 ngày")
+- Dùng tags và priority cho tasks
+- Flow hàng ngày: sáng xem focus → trong ngày thêm/done tasks → cuối ngày review → cuối tuần phân tích
+
+## Lưu ý quan trọng
+
+- Không cần nhớ tên tool — nói tự nhiên, AI tự chọn
+- Knowledge base vĩnh viễn — lưu 1 lần, dùng mãi
+- Mọi thay đổi có git history — revert bất kỳ lúc nào
+- Không giới hạn ngôn ngữ — tiếng Việt, Anh, mix đều được
+`;
+
 // Default templates for brain files
 const BRAIN_TEMPLATES: Array<{ section: string; content: string }> = [
   {
@@ -50,6 +163,10 @@ const BRAIN_TEMPLATES: Array<{ section: string; content: string }> = [
     section: "knowledge/general.md",
     content:
       "---\nname: General\ndescription: General knowledge and notes\ntags: general\n---\n\n## Welcome\n\nThis is your knowledge base. Add entries with the addKnowledge tool.\n",
+  },
+  {
+    section: "knowledge/huong-dan-mcp.md",
+    content: GUIDE_KNOWLEDGE,
   },
 ];
 
