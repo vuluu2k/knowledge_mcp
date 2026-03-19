@@ -85,18 +85,34 @@ AI:  ## Insights
 
 ### Cách 1: Một lệnh duy nhất
 
+**macOS / Linux:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.sh -o install.sh && bash install.sh
 ```
 
+**Windows (PowerShell):**
+```powershell
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.ps1 -OutFile install.ps1; .\install.ps1
+```
+
 Clone, install, build, cấu hình `.env` interactive, in ra config sẵn cho AI platform của bạn.
+
+Script tự động kiểm tra và cài Node.js nếu chưa có (hỗ trợ winget, Chocolatey, Scoop, hoặc tải installer trực tiếp).
 
 ### Cách 2: Clone + script
 
+**macOS / Linux:**
 ```bash
 git clone https://github.com/vuluu2k/knowledge_mcp.git
 cd knowledge_mcp
 ./install.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/vuluu2k/knowledge_mcp.git
+cd knowledge_mcp
+.\install.ps1
 ```
 
 ### Cách 3: Thủ công
@@ -415,12 +431,22 @@ WRITE_RETRIES=3                         # Retry khi conflict
 
 ## Cập nhật
 
+**macOS / Linux:**
 ```bash
 # Nếu cài bằng curl (mặc định ~/.knowledge-brain-mcp)
-curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/update.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/update.sh -o update.sh && bash update.sh
 
 # Hoặc chạy trực tiếp trong thư mục đã clone
 ./update.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+# Nếu cài mặc định (~\.knowledge-brain-mcp)
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/update.ps1 -OutFile update.ps1; .\update.ps1
+
+# Hoặc chạy trực tiếp trong thư mục đã clone
+.\update.ps1
 ```
 
 Script tự động xử lý toàn bộ:
@@ -457,13 +483,23 @@ Script tự động xử lý toàn bộ:
 Nếu cài ở thư mục khác (không phải mặc định), truyền đường dẫn:
 
 ```bash
+# macOS / Linux
 ./update.sh ~/my-custom-path
+
+# Windows
+.\update.ps1 -Path "C:\my-custom-path"
 ```
 
 ## Gỡ cài đặt
 
+**macOS / Linux:**
 ```bash
 ./install.sh --uninstall
+```
+
+**Windows (PowerShell):**
+```powershell
+.\install.ps1 -Uninstall
 ```
 
 Xóa thư mục server + tự động gỡ config khỏi tất cả IDE (Claude Desktop, Claude Code, Cursor, Windsurf...).
@@ -472,12 +508,29 @@ Xóa thư mục server + tự động gỡ config khỏi tất cả IDE (Claude 
 
 ## Scripts
 
+### macOS / Linux
+
 | Lệnh | Mô tả |
 |-------|--------|
-| `curl ... \| bash` | Cài từ xa — clone, build, cấu hình IDE tự động |
+| `curl ... -o install.sh && bash install.sh` | Cài từ xa — clone, build, cấu hình IDE tự động |
 | `./install.sh` | Cài đặt (hoạt động cả local lẫn curl pipe) |
 | `./install.sh --uninstall` | Gỡ cài đặt + xóa config IDE |
 | `./update.sh` | Cập nhật — pull, rebuild, check .env |
+
+### Windows (PowerShell)
+
+| Lệnh | Mô tả |
+|-------|--------|
+| `Invoke-WebRequest ... -OutFile install.ps1; .\install.ps1` | Cài từ xa |
+| `.\install.ps1` | Cài đặt |
+| `.\install.ps1 -Uninstall` | Gỡ cài đặt + xóa config IDE |
+| `.\update.ps1` | Cập nhật — pull, rebuild, check .env |
+| `.\update.ps1 -Path "C:\path"` | Cập nhật thư mục chỉ định |
+
+### Chung
+
+| Lệnh | Mô tả |
+|-------|--------|
 | `npm run build` | Build TypeScript |
 | `npm run start` | Chạy server |
 | `npm run dev` | Dev mode (tsx) |

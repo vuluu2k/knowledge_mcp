@@ -15,6 +15,9 @@
 #
 #  Gỡ cài đặt:
 #    ./install.sh --uninstall
+#
+#  Windows (PowerShell):
+#    Invoke-WebRequest -Uri https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.ps1 -OutFile install.ps1; .\install.ps1
 # ═══════════════════════════════════════════════════════════
 
 set -e
