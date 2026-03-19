@@ -142,6 +142,92 @@ export class GitHubClient {
     }
   }
 
+  /**
+   * Create multiple files in a single commit using the Git Tree API.
+   * Works on both empty repos (no commits) and existing repos.
+   */
+  async createFiles(
+    files: Array<{ path: string; content: string }>,
+    message: string
+  ): Promise<void> {
+    const log = getLogger();
+    log.info("github.createFiles", {
+      count: files.length,
+      paths: files.map((f) => f.path),
+    });
+
+    // Build tree items with inline content
+    const treeItems = files.map((f) => ({
+      path: f.path,
+      mode: "100644" as const,
+      type: "blob" as const,
+      content: f.content,
+    }));
+
+    let baseTreeSha: string | undefined;
+    let parentSha: string | undefined;
+
+    try {
+      // Get current branch HEAD
+      const { data: ref } = await this.octokit.git.getRef({
+        owner: this.owner,
+        repo: this.repo,
+        ref: `heads/${this.branch}`,
+      });
+      parentSha = ref.object.sha;
+
+      // Get the tree of that commit
+      const { data: commit } = await this.octokit.git.getCommit({
+        owner: this.owner,
+        repo: this.repo,
+        commit_sha: parentSha,
+      });
+      baseTreeSha = commit.tree.sha;
+    } catch (err: unknown) {
+      // Empty repo — no commits yet, that's fine
+      const status = (err as any)?.status;
+      if (status !== 404 && status !== 409) throw err;
+      log.info("github.createFiles: empty repo, creating initial commit");
+    }
+
+    // Create tree (with base_tree if repo has commits)
+    const { data: tree } = await this.octokit.git.createTree({
+      owner: this.owner,
+      repo: this.repo,
+      tree: treeItems,
+      ...(baseTreeSha ? { base_tree: baseTreeSha } : {}),
+    });
+
+    // Create commit
+    const { data: newCommit } = await this.octokit.git.createCommit({
+      owner: this.owner,
+      repo: this.repo,
+      message,
+      tree: tree.sha,
+      ...(parentSha ? { parents: [parentSha] } : { parents: [] }),
+    });
+
+    // Update (or create) branch ref
+    try {
+      await this.octokit.git.updateRef({
+        owner: this.owner,
+        repo: this.repo,
+        ref: `heads/${this.branch}`,
+        sha: newCommit.sha,
+      });
+    } catch {
+      // Branch doesn't exist yet — create it
+      await this.octokit.git.createRef({
+        owner: this.owner,
+        repo: this.repo,
+        ref: `refs/heads/${this.branch}`,
+        sha: newCommit.sha,
+      });
+    }
+
+    this.invalidateAll();
+  }
+
   invalidate(path: string) {
     this.cache.delete(path);
   }

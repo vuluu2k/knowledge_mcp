@@ -47,6 +47,20 @@ export class BrainSync {
   }
 
   /**
+   * Create multiple brain files in a single commit.
+   */
+  async createFiles(
+    files: Array<{ section: string; content: string }>,
+    message: string
+  ): Promise<void> {
+    const mapped = files.map((f) => ({
+      path: `${this.basePath}/${f.section}`,
+      content: f.content,
+    }));
+    return this.client.createFiles(mapped, message);
+  }
+
+  /**
    * Atomic read-modify-write with automatic retry on SHA conflict.
    * The `updateFn` receives current file content and returns the new content.
    * On 409 Conflict, re-reads the file and re-applies the update.

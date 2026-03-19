@@ -64,29 +64,30 @@ BRAIN_BASE_PATH=brain
 
 ## Chuẩn bị Brain Repository
 
-Tạo một repo trên GitHub (ví dụ: `brain`) với cấu trúc thư mục sau:
+### Cách 1: Tự động (khuyên dùng)
+
+Chỉ cần **tạo repo rỗng** trên GitHub (ví dụ: `brain`), rồi kết nối MCP server. Sau đó nói với Claude:
+
+> "Khởi tạo brain cho tôi"
+
+Claude sẽ gọi tool `initBrain` và tự động tạo toàn bộ cấu trúc thư mục trong **1 commit**:
 
 ```
 brain/
-├── inbox/
-│   └── capture.md
-├── tasks/
-│   ├── today.md
-│   └── backlog.md
-├── projects/
-│   └── project-a.md
-├── notes/
-│   ├── ideas.md
-│   └── learning.md
-└── goals/
-    ├── short-term.md
-    └── long-term.md
+├── inbox/capture.md
+├── tasks/today.md
+├── tasks/backlog.md
+├── notes/ideas.md
+├── notes/learning.md
+├── goals/short-term.md
+└── goals/long-term.md
 ```
 
-Bạn có thể copy thư mục `example-brain/brain/` trong repo này làm mẫu:
+### Cách 2: Thủ công
+
+Nếu muốn tự tạo, copy thư mục `example-brain/brain/` trong repo này lên GitHub:
 
 ```bash
-# Tạo repo "brain" trên GitHub, sau đó:
 cd example-brain
 git init
 git add .
@@ -100,7 +101,8 @@ git push -u origin main
 ```markdown
 - [ ] Task chưa làm
 - [x] Task đã hoàn thành
-- [ ] Task có tag #work #urgent
+- [ ] !!! Task ưu tiên cao #work @due(2026-03-20)
+- [ ] !! Task ưu tiên trung bình #personal
 ```
 
 Các file khác (notes, goals, inbox) viết tự do, mỗi dòng là một item.
@@ -170,6 +172,12 @@ Hoặc cấu hình thủ công trong `.claude/settings.json`:
 
 ## Danh sách Tools
 
+### Khởi tạo
+
+| Tool | Mô tả |
+|------|--------|
+| `initBrain` | Tạo toàn bộ cấu trúc brain trên repo rỗng (1 commit) |
+
 ### Đọc dữ liệu
 
 | Tool | Mô tả |
@@ -192,9 +200,16 @@ Hoặc cấu hình thủ công trong `.claude/settings.json`:
 
 ---
 
-## Cách sử dụng
+## Bắt đầu sử dụng
 
-Sau khi kết nối, hỏi Claude bất kỳ câu nào:
+**Lần đầu tiên** — tạo repo rỗng trên GitHub, cấu hình MCP, rồi nói:
+
+```
+"Khởi tạo brain cho tôi"
+→ Claude gọi initBrain, tạo toàn bộ cấu trúc
+```
+
+**Sau đó** — hỏi Claude bất kỳ câu nào:
 
 ```
 "Hôm nay tôi cần làm gì?"
@@ -225,21 +240,40 @@ src/
 ├── index.ts          # Entry point — khởi tạo server + stdio transport
 ├── mcp.ts            # Đăng ký tất cả MCP tools
 ├── config.ts         # Load biến môi trường
+├── logger.ts         # Structured JSON logger (ghi ra stderr)
+├── errors.ts         # Error hierarchy (NotFoundError, ConflictError...)
 ├── core/
-│   ├── brain.ts      # Facade chính — đọc/ghi brain qua GitHub
+│   ├── brain.ts      # Facade chính — đọc/ghi/init brain qua GitHub
 │   ├── parser.ts     # Parse markdown ↔ structured data
 │   └── aggregator.ts # Truy vấn cross-file (tổng hợp tasks)
 ├── github/
-│   ├── client.ts     # Octokit wrapper (getFile, updateFile)
-│   └── sync.ts       # Map brain section → GitHub file path
+│   ├── client.ts     # Octokit wrapper (getFile, updateFile, createFiles)
+│   └── sync.ts       # Map brain section → GitHub file path + retry
 ├── tools/
+│   ├── helpers.ts    # toolHandler wrapper (error handling + logging)
+│   ├── brain.ts      # Tool: initBrain
 │   ├── tasks.ts      # Tools: getTasks, addTask, markTaskDone...
 │   ├── notes.ts      # Tools: getNotes, addNote, getGoals
 │   └── inbox.ts      # Tools: getInbox, saveToInbox
 └── types/
     ├── brain.ts      # Types: FileContent, BrainSection, Note, Goal
-    └── task.ts       # Types: Task, TaskStatus
+    └── task.ts       # Types: Task, TaskStatus, TaskPriority
 ```
+
+---
+
+## Biến môi trường
+
+| Biến | Bắt buộc | Mặc định | Mô tả |
+|------|----------|----------|--------|
+| `GITHUB_TOKEN` | Yes | — | GitHub Personal Access Token (quyền repo) |
+| `GITHUB_OWNER` | Yes | — | Username hoặc org trên GitHub |
+| `GITHUB_REPO` | Yes | — | Tên repo chứa brain |
+| `GITHUB_BRANCH` | No | `main` | Branch sử dụng |
+| `BRAIN_BASE_PATH` | No | `brain` | Thư mục gốc trong repo |
+| `LOG_LEVEL` | No | `info` | `debug` / `info` / `warn` / `error` |
+| `CACHE_TTL_MS` | No | `30000` | Thời gian cache file reads (ms) |
+| `WRITE_RETRIES` | No | `3` | Số lần retry khi gặp SHA conflict |
 
 ---
 
@@ -255,10 +289,12 @@ npm run dev      # Chạy trực tiếp bằng tsx (development)
 
 ## Lưu ý kỹ thuật
 
-- **Không cache SHA:** Mỗi lần ghi đều đọc file mới nhất từ GitHub để lấy SHA, tránh conflict khi file bị sửa từ nơi khác.
+- **initBrain dùng Git Tree API:** Tạo tất cả file trong 1 commit duy nhất, hoạt động cả trên repo hoàn toàn rỗng (chưa có commit nào).
+- **TTL Cache:** File reads được cache trong bộ nhớ (mặc định 30s) để giảm API calls. Writes tự động invalidate cache.
+- **Retry on conflict:** Khi ghi file gặp SHA conflict (409), server tự đọc lại file mới nhất và thử lại (mặc định 3 lần).
 - **Format-preserving:** Khi sửa task (mark done, thêm task), server chỉ sửa đúng dòng cần thiết, không rewrite toàn bộ file.
-- **Auto-create:** Nếu file chưa tồn tại khi ghi lần đầu, server tự tạo file với header phù hợp.
-- **Task ID ổn định:** ID được tạo từ SHA-256 hash của nội dung task, không phụ thuộc vào vị trí dòng.
+- **CRLF safe:** Parser tự normalize `\r\n` → `\n`, hỗ trợ frontmatter, numbered lists, priority markers (`!`/`!!`/`!!!`), due dates (`@due(YYYY-MM-DD)`).
+- **Structured logging:** Tất cả logs ghi ra stderr dạng JSON, không ảnh hưởng MCP protocol trên stdout.
 
 ---
 

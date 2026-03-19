@@ -15,8 +15,66 @@ import {
   appendInboxItem,
 } from "./parser.js";
 
+// Default templates for brain files
+const BRAIN_TEMPLATES: Array<{ section: string; content: string }> = [
+  {
+    section: "inbox/capture.md",
+    content: "# Inbox\n\nCapture quick thoughts here.\n",
+  },
+  {
+    section: "tasks/today.md",
+    content: "# Today\n\n- [ ] Get started with your AI brain\n",
+  },
+  {
+    section: "tasks/backlog.md",
+    content: "# Backlog\n\n",
+  },
+  {
+    section: "notes/ideas.md",
+    content: "# Ideas\n\n",
+  },
+  {
+    section: "notes/learning.md",
+    content: "# Learning\n\n",
+  },
+  {
+    section: "goals/short-term.md",
+    content: "# Short-Term Goals\n\n",
+  },
+  {
+    section: "goals/long-term.md",
+    content: "# Long-Term Goals\n\n",
+  },
+];
+
 export class Brain {
   constructor(private sync: BrainSync) {}
+
+  // ─── Init ───────────────────────────────────────────────
+
+  async initBrain(): Promise<{ created: string[] }> {
+    const log = getLogger();
+
+    // Check if brain already exists by trying to read any section
+    try {
+      await this.sync.readSection("inbox");
+      throw new Error(
+        "Brain already initialized — inbox/capture.md exists. Use the other tools to manage your brain."
+      );
+    } catch (err) {
+      if (!isNotFound(err)) throw err;
+      // Not found = good, proceed with init
+    }
+
+    await this.sync.createFiles(
+      BRAIN_TEMPLATES,
+      "feat(ai): initialize brain structure"
+    );
+
+    const created = BRAIN_TEMPLATES.map((t) => t.section);
+    log.info("initBrain", { created });
+    return { created };
+  }
 
   // ─── Read Operations ────────────────────────────────────
 
