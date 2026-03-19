@@ -211,10 +211,18 @@ install_mcp() {
 
   cd "$INSTALL_DIR"
 
+  # Đảm bảo user hiện tại có quyền ghi vào thư mục
+  if [ ! -w "$INSTALL_DIR" ]; then
+    warn "Không có quyền ghi vào $INSTALL_DIR, đang sửa quyền..."
+    chmod -R u+rwX "$INSTALL_DIR" 2>/dev/null || sudo chown -R "$(whoami)" "$INSTALL_DIR"
+  fi
+
   info "Đang cài dependencies..."
   if ! npm install < /dev/null; then
-    error "npm install thất bại! Kiểm tra Node.js version và kết nối mạng."
-    echo "  Thử chạy thủ công: cd $INSTALL_DIR && npm install"
+    error "npm install thất bại!"
+    echo "  Nếu bị permission denied, thử:"
+    echo "    sudo chown -R \$(whoami) $INSTALL_DIR"
+    echo "    cd $INSTALL_DIR && npm install"
     exit 1
   fi
 
