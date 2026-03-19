@@ -47,7 +47,8 @@ const BRAIN_TEMPLATES: Array<{ section: string; content: string }> = [
   },
   {
     section: "knowledge/general.md",
-    content: "# General\n\n## Welcome\n\nThis is your knowledge base. Add entries with `addKnowledge` tool.\n",
+    content:
+      "---\nname: General\ndescription: General knowledge and notes\ntags: general\n---\n\n## Welcome\n\nThis is your knowledge base. Add entries with the addKnowledge tool.\n",
   },
 ];
 
