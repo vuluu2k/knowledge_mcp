@@ -1,33 +1,97 @@
 # Knowledge MCP Server
 
-MCP server biến GitHub repository thành **bộ não cá nhân** cho AI. Claude đọc/ghi trực tiếp vào các file markdown trên GitHub thông qua giao thức MCP.
+**Biến AI thành trợ lý cá nhân có trí nhớ vĩnh viễn.**
+
+Quản lý công việc, ghi chú, mục tiêu và kiến thức — tất cả bằng ngôn ngữ tự nhiên. Mọi thứ được lưu trên GitHub, có version control, truy cập từ bất kỳ đâu.
 
 ```
-Claude (LLM) ◄──stdio──► MCP Server ◄──HTTPS──► GitHub API ◄──► brain/ repo
+Bạn nói                              AI làm
+─────────────────────────────────────────────────────────
+"Hôm nay tôi cần làm gì?"           → Xem tasks hôm nay
+"Thêm task: thiết kế landing page"   → Tạo task mới
+"Xong task review PR rồi"            → Đánh dấu hoàn thành
+"Lưu kiến thức Docker: dùng alpine"  → Lưu vào knowledge base
+"Chính sách bảo hành thế nào?"       → Tìm và trả lời từ dữ liệu đã lưu
+"Phân tích năng suất của tôi"        → Báo cáo insights + gợi ý cải thiện
 ```
 
-**Nguyên tắc:** MCP server chỉ xử lý dữ liệu, không gọi LLM. Toàn bộ suy luận do Claude đảm nhận.
-
-> **Mới dùng?** Xem [GUIDE.md](./GUIDE.md) — hướng dẫn chat với AI agent hiệu quả.
+> Không cần nhớ tên lệnh. Nói tự nhiên. AI tự hiểu.
 
 ---
 
-## Cài đặt nhanh
+## Tại sao dùng Knowledge MCP?
+
+**AI thông thường quên sau mỗi cuộc hội thoại.** Knowledge MCP cho AI bộ nhớ dài hạn — lưu một lần, dùng mãi mãi.
+
+- **Trí nhớ vĩnh viễn** — Kiến thức lưu trên GitHub, không bao giờ mất. AI trả lời dựa trên dữ liệu bạn đã lưu, không phịa.
+- **Quản lý công việc bằng giọng nói tự nhiên** — Thêm task, đánh dấu xong, xem backlog — không cần mở app nào khác.
+- **Knowledge base cá nhân** — Lưu quy trình, chính sách, ghi chú kỹ thuật, bất kỳ thứ gì. AI tìm và trả lời chính xác khi bạn hỏi lại.
+- **Phân tích năng suất** — AI phân tích thói quen làm việc, phát hiện vấn đề, gợi ý cải thiện cụ thể.
+- **Version control** — Mỗi hành động là một git commit. Xem lịch sử, rollback bất kỳ lúc nào.
+- **Hoạt động trên mọi AI platform** — Claude Desktop, Cursor, VS Code, Windsurf, Claude Code CLI, và bất kỳ MCP client nào.
+
+---
+
+## Demo nhanh
+
+### Quản lý công việc
+```
+Bạn: Hôm nay tôi cần làm gì?
+AI:  Bạn có 3 tasks hôm nay:
+     1. !! Review PR của Minh #dev @due(2025-03-20)
+     2. Thiết kế landing page #design
+     3. Fix bug login page #dev
+
+Bạn: Xong task review PR rồi
+AI:  Đã đánh dấu hoàn thành "Review PR của Minh" ✓
+```
+
+### Knowledge base
+```
+Bạn: Ghi nhớ: chính sách đổi trả là 7 ngày, sản phẩm còn nguyên tem
+AI:  Đã lưu vào knowledge base, topic "chinh-sach" với tags: đổi trả, chính sách
+
+Bạn: Khách hỏi chính sách đổi trả thế nào?
+AI:  Theo dữ liệu đã lưu: Chính sách đổi trả là 7 ngày, sản phẩm còn nguyên tem.
+```
+
+### Phân tích năng suất
+```
+Bạn: Phân tích năng suất của tôi tuần này
+AI:  ## Insights
+     - Bạn hoạt động nhiều nhất lúc 9-11h sáng (65% commits)
+     - Completion rate: 72% — khá tốt
+
+     ## Vấn đề
+     - 3 tasks quá hạn, task "Refactor auth module" trễ 5 ngày
+     - 4 tasks không có deadline — dễ bị trì hoãn
+     - Backlog đang phình (12 items), có vẻ chưa được review
+
+     ## Gợi ý
+     - Đặt deadline cho 4 tasks đang thiếu
+     - Review và dọn backlog — bỏ hoặc lên lịch cụ thể
+     - Chia nhỏ "Refactor auth module" — task quá lớn
+```
+
+---
+
+## Cài đặt (2 phút)
 
 ### Yêu cầu
 
 - Node.js >= 18
 - GitHub account + Personal Access Token ([tạo tại đây](https://github.com/settings/tokens) — cần quyền **repo**)
+- Một repo rỗng trên GitHub (ví dụ: `brain`)
 
-### Cách 1: curl (nhanh nhất)
+### Cách 1: Một lệnh duy nhất
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/webcake-tech/knowledge_mcp/main/install-curl.sh | bash
 ```
 
-1 lệnh duy nhất — clone, install, build, cấu hình `.env` interactive, in ra config cho Claude.
+Clone, install, build, cấu hình `.env` interactive, in ra config sẵn cho AI platform của bạn.
 
-### Cách 2: clone + install script
+### Cách 2: Clone + script
 
 ```bash
 git clone https://github.com/webcake-tech/knowledge_mcp.git
@@ -35,44 +99,14 @@ cd knowledge_mcp
 ./install.sh
 ```
 
-### Cách 3: thủ công
+### Cách 3: Thủ công
 
 ```bash
 git clone https://github.com/webcake-tech/knowledge_mcp.git
 cd knowledge_mcp
-npm install
-npm run build
+npm install && npm run build
 cp .env.example .env
-# Edit .env với token + repo info
-```
-
----
-
-## Cập nhật
-
-```bash
-./update.sh
-```
-
-Script sẽ tự động:
-- Pull code mới nhất
-- Cài lại dependencies nếu có thay đổi
-- Rebuild TypeScript
-- Kiểm tra có biến môi trường mới nào cần thêm vào `.env`
-
----
-
-## Cấu hình `.env`
-
-```env
-GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx   # Bắt buộc
-GITHUB_OWNER=yourusername               # Bắt buộc
-GITHUB_REPO=brain                       # Bắt buộc
-GITHUB_BRANCH=main                      # Mặc định: main
-BRAIN_BASE_PATH=brain                   # Mặc định: brain
-LOG_LEVEL=info                          # debug | info | warn | error
-CACHE_TTL_MS=30000                      # Cache reads (ms)
-WRITE_RETRIES=3                         # Retry khi conflict
+# Sửa .env với token + repo info
 ```
 
 ---
@@ -81,13 +115,12 @@ WRITE_RETRIES=3                         # Retry khi conflict
 
 MCP server chạy qua stdio — tương thích mọi platform hỗ trợ MCP.
 
-> Thay `/path/to/knowledge_mcp` bằng đường dẫn thực tế. Script `install.sh` sẽ in ra đường dẫn chính xác.
+> Thay `/path/to/knowledge_mcp` bằng đường dẫn thực tế. Script `install.sh` sẽ in ra config copy-paste sẵn.
 
-### Claude Desktop
+<details>
+<summary><b>Claude Desktop</b></summary>
 
-File cấu hình:
-- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+File: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) hoặc `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
 
 ```json
 {
@@ -104,16 +137,20 @@ File cấu hình:
   }
 }
 ```
+</details>
 
-### Claude Code (CLI)
+<details>
+<summary><b>Claude Code (CLI)</b></summary>
 
 ```bash
 claude mcp add knowledge-brain -- node /path/to/knowledge_mcp/dist/index.js
 ```
+</details>
 
-### Cursor
+<details>
+<summary><b>Cursor</b></summary>
 
-Settings → MCP Servers → Add new:
+Settings > MCP Servers > Add new:
 
 ```json
 {
@@ -130,8 +167,10 @@ Settings → MCP Servers → Add new:
   }
 }
 ```
+</details>
 
-### VS Code (Copilot / Roo Code / Continue)
+<details>
+<summary><b>VS Code (Copilot / Roo Code / Continue)</b></summary>
 
 File `.vscode/mcp.json` trong project hoặc global settings:
 
@@ -150,8 +189,10 @@ File `.vscode/mcp.json` trong project hoặc global settings:
   }
 }
 ```
+</details>
 
-### Windsurf
+<details>
+<summary><b>Windsurf</b></summary>
 
 File `~/.codeium/windsurf/mcp_config.json`:
 
@@ -170,8 +211,10 @@ File `~/.codeium/windsurf/mcp_config.json`:
   }
 }
 ```
+</details>
 
-### OpenAI Codex CLI
+<details>
+<summary><b>OpenAI Codex CLI</b></summary>
 
 File `~/.codex/config.json`:
 
@@ -190,10 +233,12 @@ File `~/.codex/config.json`:
   }
 }
 ```
+</details>
 
-### Antigravity
+<details>
+<summary><b>Antigravity</b></summary>
 
-Project settings → Integrations → MCP → Add server:
+Project settings > Integrations > MCP > Add server:
 
 ```json
 {
@@ -210,10 +255,10 @@ Project settings → Integrations → MCP → Add server:
   }
 }
 ```
+</details>
 
-### Bất kỳ MCP Client nào
-
-Cấu hình chung — chỉ cần 3 thứ:
+<details>
+<summary><b>Bất kỳ MCP Client nào</b></summary>
 
 | Field | Value |
 |-------|-------|
@@ -222,41 +267,57 @@ Cấu hình chung — chỉ cần 3 thứ:
 | Env | `GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO` |
 
 Transport: **stdio** (mặc định).
+</details>
 
 ---
 
 ## Bắt đầu sử dụng
 
-### Lần đầu — tạo repo rỗng trên GitHub, rồi nói:
+### Bước 1 — Khởi tạo (chỉ 1 lần)
+
+Tạo một repo rỗng trên GitHub, cấu hình xong, rồi nói:
 
 ```
 Khởi tạo brain cho tôi
 ```
 
-Claude tạo toàn bộ cấu trúc trong 1 commit:
+AI tạo toàn bộ cấu trúc trong 1 commit:
 
 ```
 brain/
-├── inbox/capture.md
-├── tasks/today.md, backlog.md
-├── notes/ideas.md, learning.md
-├── goals/short-term.md, long-term.md
-└── knowledge/general.md
+├── inbox/capture.md           ← Ghi nhanh
+├── tasks/
+│   ├── today.md               ← Việc hôm nay
+│   └── backlog.md             ← Việc để dành
+├── notes/
+│   ├── ideas.md               ← Ý tưởng
+│   └── learning.md            ← Kiến thức học được
+├── goals/
+│   ├── short-term.md          ← Mục tiêu ngắn hạn
+│   └── long-term.md           ← Mục tiêu dài hạn
+└── knowledge/
+    └── general.md             ← Knowledge base
 ```
 
-### Sau đó — nói chuyện tự nhiên:
+### Bước 2 — Dùng hàng ngày
 
-```
-"Hôm nay tôi cần làm gì?"          → getTodayTasks
-"Thêm task: thiết kế landing page"  → addTask
-"Xong task review PR rồi"           → markTaskDone
-"Tóm tắt goals của tôi"            → getGoals
-"Ghi lại ý tưởng: AI chatbot"      → addNote / saveToInbox
-```
+Nói chuyện tự nhiên. AI tự chọn tool phù hợp.
+
+| Bạn nói | AI hiểu |
+|---------|---------|
+| "thêm task", "nhắc tôi", "cần làm" | Tạo task mới |
+| "xong rồi", "done", "hoàn thành" | Đánh dấu task xong |
+| "ghi lại", "note", "ý tưởng" | Thêm ghi chú |
+| "nhớ giùm", "capture", "lưu nhanh" | Lưu vào inbox |
+| "lưu kiến thức", "ghi nhớ rằng" | Lưu vào knowledge base |
+| "tìm", "nhắc lại", "có ghi gì về" | Tìm trong knowledge |
+| "phân tích năng suất", "review" | Báo cáo insights |
+
+> Chi tiết hơn: [GUIDE.md](./GUIDE.md) — hướng dẫn chat với AI agent hiệu quả.
 
 ---
 
-## Danh sách Tools (15)
+## Danh sách Tools (16)
 
 ### Khởi tạo
 
@@ -264,17 +325,17 @@ brain/
 |------|--------|
 | `initBrain` | Tạo toàn bộ cấu trúc brain trên repo rỗng (1 commit) |
 
-### Tasks
+### Tasks (5 tools)
 
 | Tool | Input | Mô tả |
 |------|-------|--------|
-| `getTasks` | `section` (today/backlog/all) | Lấy tasks |
+| `getTasks` | `section` (today/backlog/all) | Lấy tasks theo section |
 | `getTodayTasks` | — | Tasks hôm nay |
 | `getBacklog` | — | Tasks backlog |
-| `addTask` | `text`, `target` | Thêm task |
-| `markTaskDone` | `taskId` hoặc `text` | Đánh dấu xong |
+| `addTask` | `text`, `target` | Thêm task mới |
+| `markTaskDone` | `taskId` hoặc `text` | Đánh dấu hoàn thành |
 
-### Notes / Goals / Inbox
+### Notes / Goals / Inbox (5 tools)
 
 | Tool | Input | Mô tả |
 |------|-------|--------|
@@ -284,20 +345,34 @@ brain/
 | `getInbox` | — | Lấy inbox |
 | `saveToInbox` | `content` | Lưu nhanh vào inbox |
 
-### Knowledge Base
+### Knowledge Base (4 tools)
 
 | Tool | Input | Mô tả |
 |------|-------|--------|
 | `listTopics` | — | Danh sách topics (name + description + tags) |
 | `getKnowledge` | `topic` | Đọc toàn bộ 1 topic |
 | `addKnowledge` | `topic`, `title`, `content`, `description?`, `tags?` | Thêm kiến thức |
-| `searchKnowledge` | `query` | Tìm kiếm cross-topic (tag → title → content) |
+| `searchKnowledge` | `query` | Tìm kiếm cross-topic (tag > title > content) |
+
+### Insights & Analytics (1 tool)
+
+| Tool | Input | Mô tả |
+|------|-------|--------|
+| `getInsights` | — | Phân tích năng suất, phát hiện vấn đề, gợi ý cải thiện |
+
+`getInsights` phân tích:
+- **Completion rate** — tỷ lệ hoàn thành tasks
+- **Overdue tasks** — tasks quá hạn và số ngày trễ
+- **Task quality** — phát hiện tasks thiếu priority, deadline, hoặc mô tả quá mơ hồ
+- **Activity patterns** — giờ nào và ngày nào bạn hoạt động nhiều nhất (từ commit history)
+- **Goal alignment** — tasks hôm nay có khớp với mục tiêu không
+- **Inbox health** — bao nhiêu items chưa xử lý
 
 ---
 
 ## Knowledge Base
 
-Lưu trữ kiến thức theo topic trong folder `knowledge/`. Mỗi file có frontmatter:
+Lưu trữ kiến thức theo topic. Mỗi file có frontmatter + entries:
 
 ```markdown
 ---
@@ -307,57 +382,44 @@ tags: chính sách, đổi trả, bảo hành
 ---
 
 ## Chính sách đổi trả
-
-- Đổi trả trong vòng 7 ngày...
+- Đổi trả trong vòng 7 ngày, sản phẩm còn nguyên tem
 
 ## Bảo hành
-
-- Sản phẩm điện tử: 12 tháng...
-```
-
-### Ví dụ
-
-```
-"Lưu kiến thức Docker: cách tối ưu Dockerfile"  → addKnowledge
-"Nhắc lại cách undo commit?"                    → searchKnowledge
-"Tôi đã lưu những gì?"                          → listTopics
-"Cho tôi xem hết về Docker"                     → getKnowledge
-"Chính sách bảo hành thế nào?"                  → searchKnowledge (match tag)
+- Sản phẩm điện tử: 12 tháng
 ```
 
 ### Search ranking
 
-1. **Tag match** — "bảo hành" match tag → trả về tất cả entries của topic đó
+1. **Tag match** — "bảo hành" match tag > trả về tất cả entries của topic
 2. **Title match** — match heading `##`
 3. **Content match** — match nội dung
 
+AI tự động tìm trong knowledge base trước khi trả lời. Nếu có dữ liệu đã lưu, AI dùng dữ liệu đó — không phịa.
+
 ---
 
-## Cấu trúc source code
+## Cấu hình `.env`
 
+```env
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx   # Bắt buộc
+GITHUB_OWNER=yourusername               # Bắt buộc
+GITHUB_REPO=brain                       # Bắt buộc
+GITHUB_BRANCH=main                      # Mặc định: main
+BRAIN_BASE_PATH=brain                   # Mặc định: brain
+LOG_LEVEL=info                          # debug | info | warn | error
+CACHE_TTL_MS=30000                      # Cache reads (ms)
+WRITE_RETRIES=3                         # Retry khi conflict
 ```
-src/
-├── index.ts              # Entry point
-├── mcp.ts                # Đăng ký tools
-├── config.ts             # Env vars
-├── logger.ts             # JSON logger → stderr
-├── errors.ts             # Error types
-├── core/
-│   ├── brain.ts          # Brain facade (tasks, notes, goals, inbox)
-│   ├── parser.ts         # Markdown ↔ structured data
-│   ├── knowledge.ts      # Knowledge base (frontmatter + search)
-│   └── aggregator.ts     # Cross-file queries
-├── github/
-│   ├── client.ts         # GitHub API (cache + retry)
-│   └── sync.ts           # Section → file path mapping
-└── tools/
-    ├── helpers.ts         # Tool wrapper
-    ├── brain.ts           # initBrain
-    ├── tasks.ts           # Task tools
-    ├── notes.ts           # Note + goal tools
-    ├── inbox.ts           # Inbox tools
-    └── knowledge.ts       # Knowledge tools
+
+---
+
+## Cập nhật
+
+```bash
+./update.sh
 ```
+
+Tự động pull code mới, cài lại dependencies, rebuild, kiểm tra biến môi trường mới.
 
 ---
 
@@ -365,24 +427,75 @@ src/
 
 | Lệnh | Mô tả |
 |-------|--------|
-| `curl ... \| bash` | Cài từ xa 1 lệnh (clone + install + build + config) |
-| `./install.sh` | Cài đặt lần đầu (deps + build + .env) |
-| `./update.sh` | Cập nhật (pull + deps + rebuild + check .env) |
-| `npm run build` | Build TypeScript → `dist/` |
-| `npm run start` | Chạy server production |
-| `npm run dev` | Chạy trực tiếp bằng tsx |
+| `curl ... \| bash` | Cài từ xa 1 lệnh |
+| `./install.sh` | Cài đặt lần đầu |
+| `./update.sh` | Cập nhật |
+| `npm run build` | Build TypeScript |
+| `npm run start` | Chạy server |
+| `npm run dev` | Dev mode (tsx) |
 
 ---
 
-## Lưu ý kỹ thuật
+## Kiến trúc
 
-- **initBrain** dùng Git Tree API — tạo tất cả file trong 1 commit, hoạt động trên repo rỗng
+```
+Claude/AI ◄──stdio──► MCP Server ◄──HTTPS──► GitHub API ◄──► brain/ repo
+```
+
+**Nguyên tắc:** MCP server chỉ xử lý dữ liệu. Toàn bộ suy luận do AI đảm nhận.
+
+```
+src/
+├── index.ts              # Entry point
+├── mcp.ts                # Đăng ký tools + server instructions
+├── config.ts             # Env vars
+├── logger.ts             # JSON logger → stderr
+├── errors.ts             # Error types
+├── core/
+│   ├── brain.ts          # Brain facade (tasks, notes, goals, inbox)
+│   ├── parser.ts         # Markdown ↔ structured data
+│   ├── knowledge.ts      # Knowledge base (frontmatter + search)
+│   ├── insights.ts       # Insight engine (analytics + patterns)
+│   └── aggregator.ts     # Cross-file queries
+├── github/
+│   ├── client.ts         # GitHub API (cache + retry)
+│   └── sync.ts           # Section → file path mapping
+└── tools/
+    ├── helpers.ts        # Tool wrapper
+    ├── brain.ts          # initBrain
+    ├── tasks.ts          # Task tools (5)
+    ├── notes.ts          # Note + goal tools (3)
+    ├── inbox.ts          # Inbox tools (2)
+    ├── knowledge.ts      # Knowledge tools (4)
+    └── insights.ts       # Insight tool (1)
+```
+
+### Kỹ thuật
+
+- **Git Tree API** — initBrain tạo tất cả file trong 1 commit, hoạt động trên repo rỗng
 - **TTL Cache** — reads cached 30s, writes tự invalidate
-- **Retry on conflict** — ghi file gặp SHA conflict (409) tự retry 3 lần
+- **Atomic writes** — SHA conflict (409) tự retry 3 lần
 - **Format-preserving** — sửa task chỉ thay đúng dòng, không rewrite file
-- **CRLF safe** — normalize `\r\n`, hỗ trợ frontmatter, numbered lists, priority (`!`/`!!`/`!!!`), due dates (`@due()`)
-- **Frontmatter knowledge** — tags cho phép search nhanh không cần đọc content
-- **Structured logging** — JSON logs ra stderr, không ảnh hưởng MCP stdout
+- **CRLF safe** — normalize line endings, hỗ trợ frontmatter, priority (`!`/`!!`/`!!!`), due dates (`@due()`)
+- **Tag-first search** — knowledge search ưu tiên tag match, không cần đọc content
+- **Commit history analysis** — phân tích patterns từ lịch sử commit cho insights
+- **Server instructions** — AI agent nhận instructions khi kết nối, hiểu ngay cách dùng
+
+---
+
+## Use Cases
+
+### Cho cá nhân
+- Quản lý tasks hàng ngày bằng ngôn ngữ tự nhiên
+- Lưu kiến thức kỹ thuật (Docker, Git, API endpoints...)
+- Theo dõi mục tiêu và tiến độ
+- Phân tích thói quen làm việc
+
+### Cho team / doanh nghiệp
+- Knowledge base chính sách (đổi trả, bảo hành, quy trình)
+- AI customer support trả lời dựa trên dữ liệu thực
+- Onboarding — nhân viên mới hỏi AI về quy trình nội bộ
+- Lưu và tra cứu tài liệu kỹ thuật
 
 ---
 
