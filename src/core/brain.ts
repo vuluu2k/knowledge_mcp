@@ -64,13 +64,15 @@ export class Brain {
   async initBrain(): Promise<{ created: string[]; repoCreated: boolean }> {
     const log = getLogger();
 
-    // Step 1: Create GitHub repo if it doesn't exist
+    // Step 1: Create GitHub repo if it doesn't exist, bootstrap if empty
     let repoCreated = false;
     if (this.client) {
       repoCreated = await this.client.ensureRepoExists();
       if (repoCreated) {
         log.info("initBrain: created new GitHub repo");
       }
+      // Handle edge case: repo exists but has 0 commits (user created empty repo)
+      await this.client.bootstrapIfEmpty();
     }
 
     // Step 2: Check if brain already exists

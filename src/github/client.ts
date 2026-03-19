@@ -66,9 +66,9 @@ export class GitHubClient {
         name: this.repo,
         private: true,
         description: "Personal AI brain — managed by Knowledge MCP Server",
-        auto_init: false,
+        auto_init: true,
       });
-      log.info("ensureRepoExists: repo created");
+      log.info("ensureRepoExists: repo created with initial commit");
       return true;
     } catch (err: unknown) {
       const status = (err as any)?.status;
@@ -79,6 +79,46 @@ export class GitHubClient {
         status ?? 500,
         err
       );
+    }
+  }
+
+  /**
+   * If the repo exists but has zero commits, create an initial commit
+   * via the Contents API (which works on empty repos unlike Git Data API).
+   */
+  async bootstrapIfEmpty(): Promise<void> {
+    const log = getLogger();
+
+    try {
+      await this.octokit.git.getRef({
+        owner: this.owner,
+        repo: this.repo,
+        ref: `heads/${this.branch}`,
+      });
+      // Branch exists → repo has commits → nothing to do
+    } catch (err: unknown) {
+      const status = (err as any)?.status;
+      if (status === 409 || status === 404) {
+        log.info("bootstrapIfEmpty: repo is empty, creating initial commit");
+        await this.octokit.repos.createOrUpdateFileContents({
+          owner: this.owner,
+          repo: this.repo,
+          path: "README.md",
+          message: "init: bootstrap repository",
+          content: Buffer.from(
+            "# Brain\n\nPersonal AI brain — managed by Knowledge MCP Server.\n"
+          ).toString("base64"),
+          branch: this.branch,
+        });
+        this.invalidateAll();
+        log.info("bootstrapIfEmpty: initial commit created");
+      } else {
+        throw new GitHubApiError(
+          `Failed to check repo state: ${(err as Error).message}`,
+          status ?? 500,
+          err
+        );
+      }
     }
   }
 
