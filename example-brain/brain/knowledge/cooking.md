@@ -1,4 +1,8 @@
-# Cooking
+---
+name: Nấu ăn
+description: Công thức và mẹo nấu ăn
+tags: nấu ăn, cooking, công thức, recipe
+---
 
 ## Cơm chiên trứng ngon
 

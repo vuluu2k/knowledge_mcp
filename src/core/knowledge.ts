@@ -2,43 +2,98 @@ import type { GitHubClient } from "../github/client.js";
 import { isNotFound, ConflictError } from "../errors.js";
 import { getLogger } from "../logger.js";
 
+// ─── Types ─────────────────────────────────────────────────
+
+export interface TopicMeta {
+  name: string;
+  description: string;
+  tags: string[];
+  file: string;
+}
+
 export interface KnowledgeEntry {
   title: string;
   content: string;
+}
+
+export interface TopicData {
+  meta: TopicMeta;
+  entries: KnowledgeEntry[];
 }
 
 export interface SearchHit {
   topic: string;
   title: string;
   content: string;
+  matchedBy: "tag" | "title" | "content";
 }
 
+// ─── Frontmatter Parser ───────────────────────────────────
+
+const FRONTMATTER_RE = /^---\s*\n([\s\S]*?)\n---\s*\n/;
 const ENTRY_HEADING_RE = /^##\s+(.+)$/;
 
-// ─── Parse a topic file into entries ───────────────────────
+function parseFrontmatter(content: string): {
+  meta: { name: string; description: string; tags: string[] };
+  body: string;
+} {
+  const match = content.match(FRONTMATTER_RE);
+  if (!match) {
+    return {
+      meta: { name: "", description: "", tags: [] },
+      body: content,
+    };
+  }
 
-function parseEntries(content: string): KnowledgeEntry[] {
-  const lines = content.split("\n");
+  const raw = match[1];
+  const body = content.slice(match[0].length);
+
+  let name = "";
+  let description = "";
+  let tags: string[] = [];
+
+  for (const line of raw.split("\n")) {
+    const [key, ...rest] = line.split(":");
+    const val = rest.join(":").trim();
+    switch (key.trim()) {
+      case "name":
+        name = val;
+        break;
+      case "description":
+        description = val;
+        break;
+      case "tags":
+        tags = val.split(",").map((t) => t.trim()).filter(Boolean);
+        break;
+    }
+  }
+
+  return { meta: { name, description, tags }, body };
+}
+
+function buildFrontmatter(name: string, description: string, tags: string[]): string {
+  return `---\nname: ${name}\ndescription: ${description}\ntags: ${tags.join(", ")}\n---\n\n`;
+}
+
+// ─── Entry Parser ──────────────────────────────────────────
+
+function parseEntries(body: string): KnowledgeEntry[] {
+  const lines = body.split("\n");
   const entries: KnowledgeEntry[] = [];
-  let currentTitle = "";
-  let currentLines: string[] = [];
+  let title = "";
+  let buf: string[] = [];
 
   for (const line of lines) {
     const m = line.match(ENTRY_HEADING_RE);
     if (m) {
-      if (currentTitle) {
-        entries.push({ title: currentTitle, content: currentLines.join("\n").trim() });
-      }
-      currentTitle = m[1].trim();
-      currentLines = [];
-    } else if (currentTitle) {
-      currentLines.push(line);
+      if (title) entries.push({ title, content: buf.join("\n").trim() });
+      title = m[1].trim();
+      buf = [];
+    } else if (title) {
+      buf.push(line);
     }
   }
-
-  if (currentTitle) {
-    entries.push({ title: currentTitle, content: currentLines.join("\n").trim() });
-  }
+  if (title) entries.push({ title, content: buf.join("\n").trim() });
 
   return entries;
 }
@@ -68,28 +123,56 @@ export class KnowledgeBase {
   }
 
   /**
-   * List all topic names. 1 API call, no file content read.
+   * List all topics with metadata (name, description, tags).
+   * Reads all files but they're cached — Claude can pick the right topic without reading entries.
    */
-  async listTopics(): Promise<string[]> {
+  async listTopics(): Promise<TopicMeta[]> {
     const files = await this.client.listDirectory(this.knowledgePath);
-    return files.map((f) => f.replace(/\.md$/, ""));
+    if (files.length === 0) return [];
+
+    const results = await Promise.all(
+      files.map(async (f) => {
+        const slug = f.replace(/\.md$/, "");
+        try {
+          const file = await this.client.getFile(`${this.knowledgePath}/${f}`);
+          const { meta } = parseFrontmatter(file.content);
+          return {
+            name: meta.name || slug,
+            description: meta.description,
+            tags: meta.tags,
+            file: slug,
+          };
+        } catch {
+          return { name: slug, description: "", tags: [], file: slug };
+        }
+      })
+    );
+
+    return results;
   }
 
   /**
-   * Get all entries in a topic. 1 API call.
+   * Get full topic with meta + all entries. 1 API call (cached).
    */
-  async getTopic(topic: string): Promise<{ topic: string; entries: KnowledgeEntry[] }> {
+  async getTopic(topic: string): Promise<TopicData> {
     const file = await this.client.getFile(this.topicPath(topic));
-    return { topic, entries: parseEntries(file.content) };
+    const { meta, body } = parseFrontmatter(file.content);
+    return {
+      meta: { ...meta, name: meta.name || topic, file: topic },
+      entries: parseEntries(body),
+    };
   }
 
   /**
-   * Add a new entry to a topic. Creates the topic file if it doesn't exist.
+   * Add a new knowledge entry to a topic.
+   * Creates the topic file with frontmatter if it doesn't exist.
    */
   async addKnowledge(
     topic: string,
     title: string,
-    content: string
+    content: string,
+    description?: string,
+    tags?: string[]
   ): Promise<{ success: true }> {
     const log = getLogger();
     const path = this.topicPath(topic);
@@ -103,7 +186,12 @@ export class KnowledgeBase {
     } catch (err) {
       if (isNotFound(err)) {
         const displayName = topic.charAt(0).toUpperCase() + topic.slice(1);
-        const initial = `# ${displayName}\n\n## ${title}\n\n${content}\n`;
+        const fm = buildFrontmatter(
+          displayName,
+          description || "",
+          tags || [topic]
+        );
+        const initial = `${fm}## ${title}\n\n${content}\n`;
         await this.client.createFile(
           path,
           initial,
@@ -117,43 +205,52 @@ export class KnowledgeBase {
   }
 
   /**
-   * Search across ALL topics by keyword. Returns matching entries.
-   * Reads from cache when available — first call loads, subsequent calls are free.
+   * Search across all topics. Tag matches rank first, then title, then content.
+   * All files are read in parallel and cached.
    */
   async searchKnowledge(query: string): Promise<SearchHit[]> {
     const log = getLogger();
-    const topics = await this.listTopics();
-    if (topics.length === 0) return [];
+    const files = await this.client.listDirectory(this.knowledgePath);
+    if (files.length === 0) return [];
 
     const lower = query.toLowerCase();
     const hits: SearchHit[] = [];
 
-    // Read all topic files in parallel (cached after first read)
-    const files = await Promise.all(
-      topics.map(async (topic) => {
+    const loaded = await Promise.all(
+      files.map(async (f) => {
         try {
-          const file = await this.client.getFile(this.topicPath(topic));
-          return { topic, content: file.content };
+          const file = await this.client.getFile(`${this.knowledgePath}/${f}`);
+          return { slug: f.replace(/\.md$/, ""), content: file.content };
         } catch {
           return null;
         }
       })
     );
 
-    for (const f of files) {
+    for (const f of loaded) {
       if (!f) continue;
-      const entries = parseEntries(f.content);
+      const { meta, body } = parseFrontmatter(f.content);
+      const entries = parseEntries(body);
+
+      // Tag match — return ALL entries of this topic
+      const tagMatch = meta.tags.some((t) => t.toLowerCase().includes(lower));
+
       for (const entry of entries) {
-        if (
-          entry.title.toLowerCase().includes(lower) ||
-          entry.content.toLowerCase().includes(lower)
-        ) {
-          hits.push({ topic: f.topic, title: entry.title, content: entry.content });
+        if (tagMatch) {
+          hits.push({ topic: f.slug, title: entry.title, content: entry.content, matchedBy: "tag" });
+        } else if (entry.title.toLowerCase().includes(lower)) {
+          hits.push({ topic: f.slug, title: entry.title, content: entry.content, matchedBy: "title" });
+        } else if (entry.content.toLowerCase().includes(lower)) {
+          hits.push({ topic: f.slug, title: entry.title, content: entry.content, matchedBy: "content" });
         }
       }
     }
 
-    log.info("searchKnowledge", { query, hits: hits.length, topicsScanned: topics.length });
+    // Sort: tag > title > content
+    const order = { tag: 0, title: 1, content: 2 };
+    hits.sort((a, b) => order[a.matchedBy] - order[b.matchedBy]);
+
+    log.info("searchKnowledge", { query, hits: hits.length });
     return hits;
   }
 

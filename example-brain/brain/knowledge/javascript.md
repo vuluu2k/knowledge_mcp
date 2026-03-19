@@ -1,4 +1,8 @@
-# JavaScript
+---
+name: JavaScript
+description: Kiến thức cơ bản và nâng cao về JavaScript
+tags: javascript, js, frontend, backend, node
+---
 
 ## var vs let vs const
 
