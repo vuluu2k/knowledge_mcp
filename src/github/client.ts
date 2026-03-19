@@ -263,6 +263,42 @@ export class GitHubClient {
     }
   }
 
+  /**
+   * List recent commits, optionally filtered by path.
+   * Useful for analyzing activity patterns over time.
+   */
+  async listCommits(
+    path?: string,
+    perPage = 50
+  ): Promise<Array<{ sha: string; message: string; date: string }>> {
+    const log = getLogger();
+    log.debug("github.listCommits", { path, perPage });
+
+    try {
+      const { data } = await this.octokit.repos.listCommits({
+        owner: this.owner,
+        repo: this.repo,
+        sha: this.branch,
+        ...(path ? { path } : {}),
+        per_page: perPage,
+      });
+
+      return data.map((c) => ({
+        sha: c.sha,
+        message: c.commit.message,
+        date: c.commit.author?.date ?? "",
+      }));
+    } catch (err: unknown) {
+      const status = (err as any)?.status;
+      if (status === 404 || status === 409) return [];
+      throw new GitHubApiError(
+        `Failed to list commits: ${(err as Error).message}`,
+        status ?? 500,
+        err
+      );
+    }
+  }
+
   invalidate(path: string) {
     this.cache.delete(path);
   }

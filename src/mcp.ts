@@ -6,6 +6,8 @@ import { registerTaskTools } from "./tools/tasks.js";
 import { registerNoteTools } from "./tools/notes.js";
 import { registerInboxTools } from "./tools/inbox.js";
 import { registerKnowledgeTools } from "./tools/knowledge.js";
+import { registerInsightTools } from "./tools/insights.js";
+import type { InsightsEngine } from "./core/insights.js";
 
 const SERVER_INSTRUCTIONS = `You are connected to the Knowledge Brain MCP server — a personal knowledge management system backed by a GitHub repository. Every action you perform creates a git commit, providing full version control and audit trail.
 
@@ -41,6 +43,9 @@ Data is stored as markdown files in a GitHub repo:
 - listTopics — show all available topics
 - getKnowledge — read all entries from a specific topic
 
+**Insights & Analytics** — when the user asks about their productivity, habits, or wants a review:
+- getInsights — generates a full behavior analysis report (task stats, quality issues, overdue items, activity patterns, goal alignment). After receiving the report, analyze and present: Insights (patterns), Problems (blockers), and Suggestions (actionable improvements). Be specific, cite evidence.
+
 **Initialization** — only for first-time setup:
 - initBrain — creates the full folder structure in one commit. Only needed once on a new/empty repo.
 
@@ -56,7 +61,7 @@ Data is stored as markdown files in a GitHub repo:
 
 5. **Topic organization**: When saving knowledge, choose descriptive topic names and add relevant tags for better searchability. Group related information under the same topic.`;
 
-export function createServer(brain: Brain, kb: KnowledgeBase): McpServer {
+export function createServer(brain: Brain, kb: KnowledgeBase, insights: InsightsEngine): McpServer {
   const server = new McpServer(
     {
       name: "knowledge-brain",
@@ -72,6 +77,7 @@ export function createServer(brain: Brain, kb: KnowledgeBase): McpServer {
   registerNoteTools(server, brain);
   registerInboxTools(server, brain);
   registerKnowledgeTools(server, kb);
+  registerInsightTools(server, insights);
 
   return server;
 }
