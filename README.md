@@ -86,7 +86,7 @@ AI:  ## Insights
 ### Cách 1: Một lệnh duy nhất
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install-curl.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.sh | bash
 ```
 
 Clone, install, build, cấu hình `.env` interactive, in ra config sẵn cho AI platform của bạn.
@@ -419,7 +419,50 @@ WRITE_RETRIES=3                         # Retry khi conflict
 ./update.sh
 ```
 
-Tự động pull code mới, cài lại dependencies, rebuild, kiểm tra biến môi trường mới.
+Script tự động xử lý toàn bộ:
+
+1. **Phát hiện thay đổi local** — nếu bạn đã sửa code, script hỏi:
+   - Lưu tạm (stash) rồi cập nhật
+   - Ghi đè thay đổi local
+   - Hủy cập nhật
+2. **Pull bản mới nhất** từ GitHub
+3. **Hiển thị changelog** — những gì đã thay đổi
+4. **Cài lại dependencies** nếu có package mới
+5. **Rebuild TypeScript** — `dist/` được build lại hoàn toàn
+6. **Kiểm tra .env** — báo nếu có biến môi trường mới cần thêm
+
+```
+[INFO] Phiên bản hiện tại: a1b2c3d
+[INFO] Đang tải bản mới nhất...
+[OK] Đã cập nhật: a1b2c3d → e4f5g6h
+
+[INFO] Thay đổi:
+  e4f5g6h feat: add auto-action engine
+  d3c2b1a fix: knowledge search ranking
+
+[OK] Đã cập nhật dependencies
+[OK] Build hoàn tất
+[OK] .env đầy đủ
+
+═══════════════════════════════════════════════════
+  Cập nhật hoàn tất!
+═══════════════════════════════════════════════════
+  Khởi động lại IDE để sử dụng bản mới.
+```
+
+Nếu cài ở thư mục khác (không phải mặc định), truyền đường dẫn:
+
+```bash
+./update.sh ~/my-custom-path
+```
+
+## Gỡ cài đặt
+
+```bash
+./install.sh --uninstall
+```
+
+Xóa thư mục server + tự động gỡ config khỏi tất cả IDE (Claude Desktop, Claude Code, Cursor, Windsurf...).
 
 ---
 
@@ -427,9 +470,10 @@ Tự động pull code mới, cài lại dependencies, rebuild, kiểm tra biế
 
 | Lệnh | Mô tả |
 |-------|--------|
-| `curl ... \| bash` | Cài từ xa 1 lệnh |
-| `./install.sh` | Cài đặt lần đầu |
-| `./update.sh` | Cập nhật |
+| `curl ... \| bash` | Cài từ xa — clone, build, cấu hình IDE tự động |
+| `./install.sh` | Cài đặt (hoạt động cả local lẫn curl pipe) |
+| `./install.sh --uninstall` | Gỡ cài đặt + xóa config IDE |
+| `./update.sh` | Cập nhật — pull, rebuild, check .env |
 | `npm run build` | Build TypeScript |
 | `npm run start` | Chạy server |
 | `npm run dev` | Dev mode (tsx) |

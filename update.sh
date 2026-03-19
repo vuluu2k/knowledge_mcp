@@ -1,85 +1,179 @@
 #!/bin/bash
+
+# ═══════════════════════════════════════════════════════════
+#  Knowledge Brain MCP Server - Cập nhật
+# ═══════════════════════════════════════════════════════════
+
 set -e
 
-# ─── Colors ─────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
+BOLD='\033[1m'
 
-echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║   Knowledge MCP Server — Update          ║${NC}"
-echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
+info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
+success() { echo -e "${GREEN}[OK]${NC} $1"; }
+warn()    { echo -e "${YELLOW}[CẢNH BÁO]${NC} $1"; }
+error()   { echo -e "${RED}[LỖI]${NC} $1"; }
+
+DEFAULT_INSTALL_DIR="$HOME/.knowledge-brain-mcp"
+
+echo ""
+echo -e "${CYAN}╔══════════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║${NC}  ${BOLD}Knowledge Brain MCP Server - Cập nhật${NC}           ${CYAN}║${NC}"
+echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# ─── Check git ──────────────────────────────────────────────
-if ! command -v git &> /dev/null; then
-    echo -e "${RED}✗ git not found${NC}"
+# ── Tìm thư mục cài đặt ──
+
+INSTALL_DIR="${1:-}"
+
+if [ -z "$INSTALL_DIR" ]; then
+  if [ -f "./package.json" ] && grep -q "knowledge-mcp" "./package.json" 2>/dev/null; then
+    INSTALL_DIR="$(pwd)"
+  elif [ -d "$DEFAULT_INSTALL_DIR" ] && [ -f "$DEFAULT_INSTALL_DIR/dist/index.js" ]; then
+    INSTALL_DIR="$DEFAULT_INSTALL_DIR"
+  else
+    error "Không tìm thấy MCP server."
+    echo ""
+    echo "  Cách dùng: ./update.sh [đường-dẫn]"
+    echo "  Ví dụ:     ./update.sh ~/.knowledge-brain-mcp"
+    echo ""
     exit 1
+  fi
 fi
 
-# ─── Save current version ──────────────────────────────────
-OLD_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-echo -e "${YELLOW}Current: ${OLD_HASH}${NC}"
+INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
 
-# ─── Pull latest ───────────────────────────────────────────
-echo ""
-echo -e "${YELLOW}Pulling latest changes...${NC}"
-git pull --ff-only
-NEW_HASH=$(git rev-parse --short HEAD)
+if [ ! -f "$INSTALL_DIR/package.json" ]; then
+  error "Không tìm thấy MCP server tại $INSTALL_DIR"
+  exit 1
+fi
 
-if [ "$OLD_HASH" = "$NEW_HASH" ]; then
-    echo -e "${GREEN}✓ Already up to date (${NEW_HASH})${NC}"
+info "Tìm thấy MCP server tại ${BOLD}$INSTALL_DIR${NC}"
+
+# ── Lưu phiên bản hiện tại ──
+
+cd "$INSTALL_DIR"
+
+CURRENT_COMMIT=""
+if [ -d ".git" ]; then
+  CURRENT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+  info "Phiên bản hiện tại: $CURRENT_COMMIT"
+fi
+
+# ── Pull bản mới nhất ──
+
+if [ -d ".git" ]; then
+  info "Đang tải bản mới nhất..."
+
+  if ! git diff --quiet 2>/dev/null; then
+    warn "Phát hiện thay đổi local"
+    echo ""
+    echo "  1) Lưu tạm (stash) và cập nhật"
+    echo "  2) Ghi đè (bỏ thay đổi local)"
+    echo "  3) Hủy"
+    echo ""
+    read -rp "  Chọn [1]: " CHOICE < /dev/tty
+    CHOICE="${CHOICE:-1}"
+
+    case "$CHOICE" in
+      1)
+        git stash
+        success "Đã lưu tạm (khôi phục bằng: git stash pop)"
+        ;;
+      2)
+        git checkout .
+        success "Đã bỏ thay đổi local"
+        ;;
+      3)
+        info "Đã hủy cập nhật."
+        exit 0
+        ;;
+      *)
+        error "Lựa chọn không hợp lệ"
+        exit 1
+        ;;
+    esac
+  fi
+
+  git pull origin main 2>/dev/null || git pull 2>/dev/null
+  NEW_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+  if [ "$CURRENT_COMMIT" = "$NEW_COMMIT" ]; then
+    success "Đã là bản mới nhất ($NEW_COMMIT)"
+  else
+    success "Đã cập nhật: $CURRENT_COMMIT → $NEW_COMMIT"
+
+    if [ "$CURRENT_COMMIT" != "unknown" ] && [ "$NEW_COMMIT" != "unknown" ]; then
+      echo ""
+      info "Thay đổi:"
+      git log --oneline "$CURRENT_COMMIT".."$NEW_COMMIT" 2>/dev/null | head -20 | while read -r line; do
+        echo "  $line"
+      done
+    fi
+  fi
 else
-    echo -e "${GREEN}✓ Updated: ${OLD_HASH} → ${NEW_HASH}${NC}"
-    echo ""
-
-    # Show what changed
-    echo -e "${CYAN}Changes:${NC}"
-    git log --oneline "${OLD_HASH}..${NEW_HASH}" 2>/dev/null | head -10
-    echo ""
+  warn "Không phải git repo — không thể pull."
+  echo "  Để cập nhật, cài lại:"
+  echo "  curl -fsSL https://raw.githubusercontent.com/vuluu2k/knowledge_mcp/main/install.sh | bash"
+  exit 1
 fi
 
-# ─── Install dependencies ──────────────────────────────────
-echo -e "${YELLOW}Installing dependencies...${NC}"
-npm install --silent
-echo -e "${GREEN}✓ Dependencies installed${NC}"
+# ── Cài lại dependencies ──
 
-# ─── Rebuild ───────────────────────────────────────────────
 echo ""
-echo -e "${YELLOW}Building TypeScript...${NC}"
+info "Đang cài dependencies..."
+npm install --silent 2>&1 | tail -1
+success "Đã cập nhật dependencies"
+
+# ── Rebuild TypeScript ──
+
+info "Đang build TypeScript..."
 rm -rf dist
 npm run build --silent
-echo -e "${GREEN}✓ Build complete${NC}"
+success "Build hoàn tất"
 
-# ─── Check .env for new variables ──────────────────────────
-echo ""
+# ── Kiểm tra .env mới ──
+
 if [ -f .env ] && [ -f .env.example ]; then
-    MISSING=""
-    while IFS= read -r line; do
-        KEY=$(echo "$line" | grep -oP '^\w+' 2>/dev/null || echo "$line" | sed -n 's/^\([A-Z_]*\)=.*/\1/p')
-        if [ -n "$KEY" ] && ! grep -q "^$KEY=" .env 2>/dev/null; then
-            MISSING="$MISSING  $KEY\n"
-        fi
-    done < <(grep -E '^[A-Z]' .env.example)
-
-    if [ -n "$MISSING" ]; then
-        echo -e "${YELLOW}⚠ New env variables found in .env.example:${NC}"
-        echo -e "$MISSING"
-        echo -e "  Add them to your .env file"
-    else
-        echo -e "${GREEN}✓ .env is up to date${NC}"
+  MISSING=""
+  while IFS= read -r line; do
+    KEY=$(echo "$line" | sed -n 's/^\([A-Z_]*\)=.*/\1/p')
+    if [ -n "$KEY" ] && ! grep -q "^$KEY=" .env 2>/dev/null; then
+      MISSING="$MISSING  $KEY\n"
     fi
-else
-    echo -e "${GREEN}✓ .env check skipped${NC}"
+  done < <(grep -E '^[A-Z]' .env.example)
+
+  if [ -n "$MISSING" ]; then
+    echo ""
+    warn "Biến môi trường mới trong .env.example:"
+    echo -e "$MISSING"
+    echo "  Thêm vào file .env"
+  else
+    success ".env đầy đủ"
+  fi
 fi
 
-# ─── Done ──────────────────────────────────────────────────
+# ── Kiểm tra ──
+
 echo ""
-echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║   Update complete!                       ║${NC}"
-echo -e "${GREEN}╚══════════════════════════════════════════╝${NC}"
+info "Đang kiểm tra..."
+if [ -f "$INSTALL_DIR/dist/index.js" ]; then
+  success "MCP server: $INSTALL_DIR/dist/index.js"
+else
+  error "Không tìm thấy dist/index.js — build có thể thất bại"
+fi
+
+# ── Hoàn tất ──
+
 echo ""
-echo -e "${CYAN}Restart Claude Desktop to load the updated server.${NC}"
+echo -e "${CYAN}═══════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}${BOLD}  Cập nhật hoàn tất!${NC}"
+echo -e "${CYAN}═══════════════════════════════════════════════════${NC}"
+echo ""
+echo -e "  ${BOLD}Khởi động lại IDE để sử dụng bản mới.${NC}"
 echo ""
