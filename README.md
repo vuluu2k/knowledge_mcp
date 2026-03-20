@@ -75,6 +75,70 @@ AI:  ## Insights
 
 ---
 
+## Khả năng tự học
+
+Knowledge MCP không chỉ lưu trữ — nó **học từ hành vi của bạn** và ngày càng thông minh hơn theo thời gian.
+
+### Càng dùng càng thông minh
+
+```
+Tuần 1: AI trả lời từ kiến thức chung
+Tuần 4: AI trả lời chính xác từ DỮ LIỆU BẠN ĐÃ LƯU
+        — chính sách, quy trình, kiến thức kỹ thuật, tất cả đều có nguồn
+```
+
+Mỗi lần bạn lưu kiến thức, AI có thêm dữ liệu để tham chiếu. Hệ thống **search-before-answer**: AI tự tìm trong knowledge base trước khi trả lời, ưu tiên dữ liệu thực thay vì bịa.
+
+### Phân tích hành vi — 5 bộ phát hiện
+
+AI phân tích **lịch sử commit + task patterns** để hiểu thói quen của bạn — hoàn toàn bằng thuật toán, không dùng LLM:
+
+| Detector | Phát hiện | Ví dụ |
+|----------|-----------|-------|
+| **Productivity** | Chronotype, peak hours, xu hướng hoạt động | "Bạn hiệu quả nhất 9-11h sáng, hoạt động giảm 40% tuần này" |
+| **Procrastination** | Priority inversion, overdue tích tụ | "3 task quan trọng bị bỏ qua, trong khi 5 task nhỏ đã xong" |
+| **Task Structure** | Task mơ hồ, quá lớn, thiếu metadata | "4 task chỉ có 2-3 từ, khó hành động" |
+| **Goal Alignment** | Task vs mục tiêu bị lệch | "Chỉ 25% task liên quan đến mục tiêu đã đề ra" |
+| **Workload** | Quá tải, inbox tồn đọng, backlog phình | "Hôm nay ước lượng 12h work — không khả thi" |
+
+Kết quả: **healthScore (0-100)** + insights xếp theo mức nghiêm trọng + gợi ý cụ thể.
+
+### Tự động tối ưu — Self-Optimizing Engine
+
+AI không chỉ phân tích — nó **tự sửa** hệ thống task của bạn:
+
+```
+Bạn: Tối ưu tasks cho tôi
+
+AI:  Preview (dry run):
+     1. autoReschedule — chuyển 2 task quá hạn từ backlog → today
+     2. autoSplitTask  — chia "Refactor auth" (8h) thành 3 subtasks
+     3. autoPrioritize — đẩy "Fix critical bug" lên today
+     4. autoCleanup    — xóa 1 task trùng lặp
+     5. autoInjectTask — tạo task cho goal "học React" (chưa có task nào)
+
+     Áp dụng không?
+
+Bạn: OK
+
+AI:  Đã áp dụng 5 thay đổi trong 1 commit.
+```
+
+**Luôn preview trước** — bạn duyệt rồi mới áp dụng. Toàn bộ thay đổi gộp trong 1 atomic commit.
+
+### Học từ thời gian
+
+Hệ thống phát hiện patterns theo thời gian thực:
+
+- **Chronotype** — early-bird hay night-owl (từ timestamp commits)
+- **Consistency** — bao nhiêu ngày có hoạt động trong 14 ngày qua
+- **Trend** — năng suất đang tăng, giảm, hay ổn định
+- **Weekend work** — có đang làm việc cuối tuần quá nhiều không
+
+Càng dùng lâu, phân tích càng chính xác vì có nhiều dữ liệu lịch sử hơn.
+
+---
+
 ## Cài đặt (2 phút)
 
 ### Yêu cầu
