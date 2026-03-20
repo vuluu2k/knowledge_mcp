@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Brain } from "../core/brain.js";
+import type { Task } from "../types/task.js";
 import { toolHandler } from "./helpers.js";
 
 export function registerTaskTools(server: McpServer, brain: Brain): void {
@@ -15,11 +16,27 @@ export function registerTaskTools(server: McpServer, brain: Brain): void {
           .optional()
           .default("all")
           .describe("Which task section to retrieve"),
+        limit: z.number().optional().describe("Max tasks to return"),
+        offset: z.number().optional().describe("Skip first N tasks"),
       },
     },
-    toolHandler("getTasks", async ({ section }) => {
-      if (section === "all") return brain.getAllTasks();
-      return brain.getTasks(section);
+    toolHandler("getTasks", async ({ section, limit, offset }) => {
+      let tasks: Task[] | { today: Task[]; backlog: Task[] };
+      if (section === "all") {
+        const all = await brain.getAllTasks();
+        if (limit || offset) {
+          const combined = [...all.today, ...all.backlog];
+          const start = offset ?? 0;
+          return combined.slice(start, limit ? start + limit : undefined);
+        }
+        return all;
+      }
+      tasks = await brain.getTasks(section);
+      if (limit || offset) {
+        const start = offset ?? 0;
+        return (tasks as Task[]).slice(start, limit ? start + limit : undefined);
+      }
+      return tasks;
     })
   );
 

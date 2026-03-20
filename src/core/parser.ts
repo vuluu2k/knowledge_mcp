@@ -132,12 +132,7 @@ function parseNestedMetadata(lines: string[], startIndex: number): NestedMeta {
 }
 
 function extractTags(text: string): { tags: string[]; cleaned: string } {
-  const tags: string[] = [];
-  const tagRegex = new RegExp(TAG_REGEX.source, TAG_REGEX.flags);
-  let m: RegExpExecArray | null;
-  while ((m = tagRegex.exec(text)) !== null) {
-    tags.push(m[1]);
-  }
+  const tags = Array.from(text.matchAll(TAG_REGEX), (m) => m[1]);
   const cleaned = text.replace(TAG_REGEX, "").replace(/\s{2,}/g, " ").trim();
   return { tags, cleaned };
 }

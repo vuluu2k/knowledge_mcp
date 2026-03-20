@@ -65,10 +65,11 @@ export function registerKnowledgeTools(
         "Search across all knowledge topics by keyword. Matches against tags, entry titles, and content. Tag matches rank first.",
       inputSchema: {
         query: z.string().describe("Search keyword or phrase"),
+        limit: z.number().optional().default(20).describe("Max results (default 20)"),
       },
     },
-    toolHandler("searchKnowledge", async ({ query }) =>
-      kb.searchKnowledge(query)
+    toolHandler("searchKnowledge", async ({ query, limit }) =>
+      kb.searchKnowledge(query, limit)
     )
   );
 }

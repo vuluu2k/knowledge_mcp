@@ -12,18 +12,7 @@ export function registerAutoActionTools(
   server.registerTool(
     "runAutoActions",
     {
-      description: `Run ALL auto-optimization actions on your task system. This is the self-optimizing engine.
-
-Actions executed (in order):
-1. **autoReschedule** — moves overdue backlog tasks to today
-2. **autoSplitTask** — breaks down tasks >4h or overdue >7 days into plan/execute/verify
-3. **autoPrioritize** — promotes top backlog tasks to today when backlog >10 and today <5
-4. **autoCleanup** — removes duplicates and stale abandoned tasks
-5. **autoInjectTask** — creates tasks for goals with no matching work
-
-IMPORTANT: Always run with dryRun=true first to preview changes. Then dryRun=false to apply. All changes are batched into ONE atomic git commit.
-
-Each action includes: type, reason (why triggered), impact (what changed), details (specific changes).`,
+      description: "Run all auto-optimizations: reschedule, split, prioritize, cleanup, inject. Always dryRun=true first to preview, then false to apply. One atomic commit.",
       inputSchema: {
         dryRun: z
           .boolean()

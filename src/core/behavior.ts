@@ -81,13 +81,27 @@ interface AnalysisData {
 // ─── BehaviorEngine ────────────────────────────────────────
 
 export class BehaviorEngine {
+  private cachedReport: BehaviorReport | null = null;
+  private cacheExpiresAt = 0;
+  private static CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
   constructor(
     private brain: Brain,
     private client: GitHubClient,
     private basePath: string
   ) {}
 
+  /** Invalidate cached report (call after writes) */
+  invalidateCache(): void {
+    this.cachedReport = null;
+    this.cacheExpiresAt = 0;
+  }
+
   async analyze(): Promise<BehaviorReport> {
+    // Return cached report if fresh
+    if (this.cachedReport && Date.now() < this.cacheExpiresAt) {
+      return this.cachedReport;
+    }
     const log = getLogger();
 
     const [allTasks, shortGoals, longGoals, inbox, commits] =
@@ -150,6 +164,10 @@ export class BehaviorEngine {
       high: insights.filter((i) => i.severity === "high").length,
       medium: insights.filter((i) => i.severity === "medium").length,
     });
+
+    // Cache the report
+    this.cachedReport = report;
+    this.cacheExpiresAt = Date.now() + BehaviorEngine.CACHE_TTL_MS;
 
     return report;
   }

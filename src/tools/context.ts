@@ -9,18 +9,7 @@ export function registerContextTools(
   server.registerTool(
     "getTodayContext",
     {
-      description: `Get today's work context — a prioritized snapshot of what to focus on right now.
-
-Returns:
-- pendingTasks: all open tasks (today + backlog)
-- completedTasks: already done
-- highPriorityTasks: priority === high
-- overdueTasks: tasks past their due date
-- suggestedFocus: top 3 tasks to focus on (scored by priority + deadline + estimate)
-- goals: short-term goals for alignment check
-- summary: counts + total estimated time
-
-Use this when the user asks "what should I do?", "what's my focus?", or starts their day. Present the suggestedFocus prominently, flag overdue tasks, and check alignment with goals.`,
+      description: "Today's prioritized snapshot: pending/completed/overdue tasks, top 3 suggested focus tasks, short-term goals, and summary stats.",
     },
     toolHandler("getTodayContext", async () => context.getTodayContext())
   );

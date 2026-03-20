@@ -3,7 +3,10 @@ import { BrainError, toErrorMessage } from "../errors.js";
 import { getLogger } from "../logger.js";
 
 function textResult(data: unknown): CallToolResult {
-  return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  const json = JSON.stringify(data, null, 2);
+  // Compact JSON for large payloads to save tokens
+  const text = json.length > 2000 ? JSON.stringify(data) : json;
+  return { content: [{ type: "text", text }] };
 }
 
 function errorResult(err: unknown): CallToolResult {
@@ -24,7 +27,7 @@ export function toolHandler<T>(
 ): (args: T) => Promise<CallToolResult> {
   return async (args: T) => {
     const log = getLogger();
-    log.debug(`tool:${name}`, { args });
+    if (log.isEnabled("debug")) log.debug(`tool:${name}`, { args });
     try {
       const result = await fn(args);
       return textResult(result);

@@ -208,7 +208,7 @@ export class KnowledgeBase {
    * Search across all topics. Tag matches rank first, then title, then content.
    * All files are read in parallel and cached.
    */
-  async searchKnowledge(query: string): Promise<SearchHit[]> {
+  async searchKnowledge(query: string, limit = 20): Promise<SearchHit[]> {
     const log = getLogger();
     const files = await this.client.listDirectory(this.knowledgePath);
     if (files.length === 0) return [];
@@ -216,32 +216,31 @@ export class KnowledgeBase {
     const lower = query.toLowerCase();
     const hits: SearchHit[] = [];
 
-    const loaded = await Promise.all(
-      files.map(async (f) => {
-        try {
-          const file = await this.client.getFile(`${this.knowledgePath}/${f}`);
-          return { slug: f.replace(/\.md$/, ""), content: file.content };
-        } catch {
-          return null;
-        }
-      })
-    );
+    // Load files sequentially with early termination for tag matches
+    for (const f of files) {
+      if (hits.length >= limit) break;
 
-    for (const f of loaded) {
-      if (!f) continue;
-      const { meta, body } = parseFrontmatter(f.content);
+      let fileContent: string;
+      try {
+        const file = await this.client.getFile(`${this.knowledgePath}/${f}`);
+        fileContent = file.content;
+      } catch {
+        continue;
+      }
+
+      const slug = f.replace(/\.md$/, "");
+      const { meta, body } = parseFrontmatter(fileContent);
       const entries = parseEntries(body);
-
-      // Tag match — return ALL entries of this topic
       const tagMatch = meta.tags.some((t) => t.toLowerCase().includes(lower));
 
       for (const entry of entries) {
+        if (hits.length >= limit) break;
         if (tagMatch) {
-          hits.push({ topic: f.slug, title: entry.title, content: entry.content, matchedBy: "tag" });
+          hits.push({ topic: slug, title: entry.title, content: entry.content, matchedBy: "tag" });
         } else if (entry.title.toLowerCase().includes(lower)) {
-          hits.push({ topic: f.slug, title: entry.title, content: entry.content, matchedBy: "title" });
+          hits.push({ topic: slug, title: entry.title, content: entry.content, matchedBy: "title" });
         } else if (entry.content.toLowerCase().includes(lower)) {
-          hits.push({ topic: f.slug, title: entry.title, content: entry.content, matchedBy: "content" });
+          hits.push({ topic: slug, title: entry.title, content: entry.content, matchedBy: "content" });
         }
       }
     }
@@ -250,7 +249,7 @@ export class KnowledgeBase {
     const order = { tag: 0, title: 1, content: 2 };
     hits.sort((a, b) => order[a.matchedBy] - order[b.matchedBy]);
 
-    log.info("searchKnowledge", { query, hits: hits.length });
+    log.info("searchKnowledge", { query, hits: hits.length, limit });
     return hits;
   }
 

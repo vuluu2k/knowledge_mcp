@@ -317,7 +317,10 @@ export class GitHubClient {
       });
     }
 
-    this.invalidateAll();
+    // Smart invalidation: only clear files that were written
+    for (const f of files) {
+      this.cache.delete(f.path);
+    }
   }
 
   /**

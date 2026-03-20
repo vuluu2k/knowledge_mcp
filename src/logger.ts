@@ -26,6 +26,11 @@ export class Logger {
     process.stderr.write(JSON.stringify(entry) + "\n");
   }
 
+  /** Check if a level would be emitted — avoids allocating data objects for suppressed levels */
+  isEnabled(level: LogLevel): boolean {
+    return LEVEL_ORDER[level] >= this.minLevel;
+  }
+
   debug(msg: string, data?: Record<string, unknown>) {
     this.emit("debug", msg, data);
   }

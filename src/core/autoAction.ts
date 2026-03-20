@@ -190,7 +190,8 @@ export class AutoActionEngine {
 
   private async readFile(path: string): Promise<string> {
     try {
-      const file = await this.client.getFile(path, true);
+      // Use cache — it's invalidated after writes anyway
+      const file = await this.client.getFile(path);
       return file.content;
     } catch (err) {
       if (isNotFound(err)) return "";
