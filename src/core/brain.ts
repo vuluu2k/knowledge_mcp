@@ -160,8 +160,8 @@ const BRAIN_TEMPLATES: Array<{ section: string; content: string }> = [
     content: "# Long-Term Goals\n\n",
   },
   {
-    section: "tasks/archive.md",
-    content: "# Archive\n\nCompleted tasks are archived here by date.\n",
+    section: "tasks/archive/.gitkeep",
+    content: "",
   },
   {
     section: "knowledge/general.md",

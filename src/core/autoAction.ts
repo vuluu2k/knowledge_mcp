@@ -12,7 +12,7 @@ import { getLogger } from "../logger.js";
 export class AutoActionEngine {
   private todayPath: string;
   private backlogPath: string;
-  private archivePath: string;
+  private archiveDir: string;
 
   constructor(
     private brain: Brain,
@@ -21,7 +21,11 @@ export class AutoActionEngine {
   ) {
     this.todayPath = `${basePath}/tasks/today.md`;
     this.backlogPath = `${basePath}/tasks/backlog.md`;
-    this.archivePath = `${basePath}/tasks/archive.md`;
+    this.archiveDir = `${basePath}/tasks/archive`;
+  }
+
+  private archiveMonthPath(todayStr: string): string {
+    return `${this.archiveDir}/${todayStr.substring(0, 7)}.md`;
   }
 
   /**
@@ -105,11 +109,12 @@ export class AutoActionEngine {
 
     // 7. Handle archive mutations
     if (mutations.archiveAppendLines.length > 0) {
-      const archiveContent = await this.readFile(this.archivePath);
-      const baseArchive = archiveContent || "# Archive\n\nCompleted tasks are archived here by date.\n";
+      const archivePath = this.archiveMonthPath(ctx.todayStr);
+      const archiveContent = await this.readFile(archivePath);
+      const baseArchive = archiveContent || `# Archive — ${ctx.todayStr.substring(0, 7)}\n\n`;
       const newArchive = appendToArchive(baseArchive, mutations.archiveAppendLines, ctx.todayStr);
       if (newArchive !== archiveContent) {
-        archiveFile = { path: this.archivePath, content: newArchive };
+        archiveFile = { path: archivePath, content: newArchive };
       }
     }
 
