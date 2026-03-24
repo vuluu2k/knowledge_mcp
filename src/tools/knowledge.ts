@@ -72,4 +72,35 @@ export function registerKnowledgeTools(
       kb.searchKnowledge(query, limit)
     )
   );
+
+  server.registerTool(
+    "updateKnowledge",
+    {
+      description:
+        "Update an existing knowledge entry (matched by title). Use after adding content to the wrong topic.",
+      inputSchema: {
+        topic: z.string().describe("Topic file name (e.g. chinh-sach-ban-hang, docker)"),
+        title: z.string().describe("Exact title of the entry to update"),
+        content: z.string().describe("New entry content (markdown)"),
+      },
+    },
+    toolHandler("updateKnowledge", async ({ topic, title, content }) =>
+      kb.updateKnowledgeEntry(topic, title, content)
+    )
+  );
+
+  server.registerTool(
+    "deleteKnowledge",
+    {
+      description:
+        "Delete a knowledge entry by title from a topic. Use to remove stale or moved entries.",
+      inputSchema: {
+        topic: z.string().describe("Topic file name (e.g. chinh-sach-ban-hang, docker)"),
+        title: z.string().describe("Exact title of the entry to delete"),
+      },
+    },
+    toolHandler("deleteKnowledge", async ({ topic, title }) =>
+      kb.deleteKnowledgeEntry(topic, title)
+    )
+  );
 }

@@ -104,6 +104,65 @@ function appendEntry(fileContent: string, title: string, content: string): strin
   return base + block;
 }
 
+function removeEntry(fileContent: string, title: string): string {
+  const lines = fileContent.split("\n");
+  const result: string[] = [];
+  let inside = false;
+
+  for (const line of lines) {
+    const m = line.match(ENTRY_HEADING_RE);
+    if (m && m[1].trim() === title) {
+      inside = true;
+      continue;
+    }
+    if (inside && m) {
+      inside = false;
+    }
+    if (!inside) {
+      result.push(line);
+    }
+  }
+
+  let out = result.join("\n").replace(/\n{3,}$/, "\n\n");
+  if (!out.endsWith("\n")) out += "\n";
+  return out;
+}
+
+function replaceEntry(fileContent: string, title: string, newContent: string): string {
+  const lines = fileContent.split("\n");
+  const result: string[] = [];
+  let inside = false;
+  let found = false;
+
+  for (const line of lines) {
+    const m = line.match(ENTRY_HEADING_RE);
+    if (m && m[1].trim() === title) {
+      inside = true;
+      found = true;
+      result.push(line);
+      result.push("");
+      for (const c of newContent.split("\n")) {
+        result.push(c);
+      }
+      continue;
+    }
+    if (inside && m) {
+      inside = false;
+    }
+    if (!inside) {
+      result.push(line);
+    }
+  }
+
+  if (!found) {
+    return appendEntry(fileContent, title, newContent);
+  }
+
+  let out = result.join("\n").replace(/\n{3,}$/, "\n\n");
+  if (!out.endsWith("\n")) out += "\n";
+  return out;
+}
+
 // ─── KnowledgeBase ─────────────────────────────────────────
 
 export class KnowledgeBase {
@@ -201,6 +260,47 @@ export class KnowledgeBase {
     }
 
     log.info("addKnowledge", { topic, title });
+    return { success: true };
+  }
+
+  /**
+   * Update an existing knowledge entry (matched by title).
+   */
+  async updateKnowledgeEntry(
+    topic: string,
+    title: string,
+    newContent: string
+  ): Promise<{ success: true }> {
+    const log = getLogger();
+    const path = this.topicPath(topic);
+
+    await this.atomicUpdate(
+      path,
+      (current) => replaceEntry(current, title, newContent),
+      `fix(ai): update knowledge entry "${title}" in ${topic}`
+    );
+
+    log.info("updateKnowledgeEntry", { topic, title });
+    return { success: true };
+  }
+
+  /**
+   * Delete a knowledge entry by title.
+   */
+  async deleteKnowledgeEntry(
+    topic: string,
+    title: string
+  ): Promise<{ success: true }> {
+    const log = getLogger();
+    const path = this.topicPath(topic);
+
+    await this.atomicUpdate(
+      path,
+      (current) => removeEntry(current, title),
+      `fix(ai): delete knowledge entry "${title}" from ${topic}`
+    );
+
+    log.info("deleteKnowledgeEntry", { topic, title });
     return { success: true };
   }
 

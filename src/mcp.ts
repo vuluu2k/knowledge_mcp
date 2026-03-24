@@ -58,6 +58,8 @@ Data is stored as markdown files in a GitHub repo:
 - searchKnowledge — ALWAYS search here first when the user asks a question that might have been previously stored (e.g., "what's our return policy?", "how do I deploy?")
 - listTopics — show all available topics
 - getKnowledge — read all entries from a specific topic
+- updateKnowledge — update an existing entry (matched by title). Use when content was added to the wrong topic.
+- deleteKnowledge — delete an entry by title. Use to remove stale or duplicate entries.
 
 **Context & Focus** — when the user starts their day or asks what to focus on:
 - getTodayContext — returns prioritized snapshot: pending/completed/overdue tasks, suggested top 3 focus tasks (scored by priority + deadline + estimate), and short-term goals for alignment check.
